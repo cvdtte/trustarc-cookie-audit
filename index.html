@@ -11,9 +11,9 @@
     <h1>Cookie Consent Audit</h1>
     <p class="subtitle">TrustArc Sales Engineer Audit Tool</p>
     <p class="instructions">
-      Walk through the audit on the customer website. Tick any finding observed.
-      When complete, click <strong>Generate Report</strong> &mdash; a 1-page Word
-      doc will download and the audit will be logged.
+      Walk through each region&rsquo;s checklist on the customer site. Tick any
+      finding observed. When complete, click <strong>Generate Report</strong> &mdash;
+      a Word doc will download and the audit will be logged.
     </p>
   </header>
 
@@ -29,23 +29,13 @@
       <input type="url" name="website_url" />
       <input type="date" name="audit_date" />
       <input type="text" name="auditor_name" />
-      <input type="text" name="vpn_regions" />
-      <input type="text" name="browsers" />
-      <input type="text" name="gpc_enabled" />
       <input type="text" name="current_cmp" />
       <input type="text" name="current_cmp_other" />
       <textarea name="recommendation"></textarea>
       <textarea name="findings_summary"></textarea>
     </form>
 
-    <form
-      id="audit-form"
-      name="cookie-audit"
-      method="POST"
-      data-netlify="true"
-      data-netlify-honeypot="bot-field"
-      novalidate
-    >
+    <form id="audit-form" name="cookie-audit" method="POST" data-netlify="true" data-netlify-honeypot="bot-field" novalidate>
       <input type="hidden" name="form-name" value="cookie-audit" />
       <p class="honeypot" aria-hidden="true">
         <label>Don&rsquo;t fill this out: <input name="bot-field" tabindex="-1" autocomplete="off" /></label>
@@ -56,23 +46,23 @@
 
         <div class="grid">
           <div class="field">
-            <label for="website_url">Website URL <span class="req">*</span></label>
-            <input type="url" id="website_url" name="website_url" placeholder="https://example.com" required />
+            <label for="website_url">Website URL</label>
+            <input type="url" id="website_url" name="website_url" placeholder="https://example.com" />
           </div>
 
           <div class="field">
-            <label for="audit_date">Audit Date <span class="req">*</span></label>
-            <input type="date" id="audit_date" name="audit_date" required />
+            <label for="audit_date">Audit Date</label>
+            <input type="date" id="audit_date" name="audit_date" />
           </div>
 
           <div class="field">
-            <label for="auditor_name">Auditor Name <span class="req">*</span></label>
-            <input type="text" id="auditor_name" name="auditor_name" required />
+            <label for="auditor_name">Auditor Name</label>
+            <input type="text" id="auditor_name" name="auditor_name" />
           </div>
 
           <div class="field">
-            <label for="current_cmp">Current CMP Detected <span class="req">*</span></label>
-            <select id="current_cmp" name="current_cmp" required>
+            <label for="current_cmp">Current CMP Detected</label>
+            <select id="current_cmp" name="current_cmp">
               <option value="">&mdash; Select &mdash;</option>
               <option>OneTrust</option>
               <option>TrustArc</option>
@@ -103,52 +93,25 @@
             </ol>
           </div>
         </details>
-
-        <fieldset class="checkbox-group" data-required="true">
-          <legend>VPN Region(s) Tested <span class="req">*</span></legend>
-          <label><input type="checkbox" name="vpn_regions" value="California" /> California</label>
-          <label><input type="checkbox" name="vpn_regions" value="EU (Paris/Frankfurt/Dublin)" /> EU (Paris/Frankfurt/Dublin)</label>
-          <label><input type="checkbox" name="vpn_regions" value="Quebec (Montreal)" /> Quebec (Montreal)</label>
-          <label><input type="checkbox" name="vpn_regions" value="Rest of Canada (Toronto)" /> Rest of Canada (Toronto)</label>
-          <label><input type="checkbox" name="vpn_regions" value="Other" /> Other</label>
-        </fieldset>
-
-        <fieldset class="checkbox-group" data-required="true">
-          <legend>Browser(s) Used <span class="req">*</span></legend>
-          <label><input type="checkbox" name="browsers" value="Chrome" /> Chrome</label>
-          <label><input type="checkbox" name="browsers" value="Firefox" /> Firefox</label>
-          <label><input type="checkbox" name="browsers" value="Brave" /> Brave</label>
-          <label><input type="checkbox" name="browsers" value="Edge" /> Edge</label>
-          <label><input type="checkbox" name="browsers" value="Safari" /> Safari</label>
-        </fieldset>
-
-        <fieldset class="radio-group" data-required="true">
-          <legend>GPC Enabled During Test? <span class="req">*</span></legend>
-          <label><input type="radio" name="gpc_enabled" value="Yes" /> Yes</label>
-          <label><input type="radio" name="gpc_enabled" value="No" /> No</label>
-          <label><input type="radio" name="gpc_enabled" value="Not applicable" /> Not applicable</label>
-        </fieldset>
       </section>
 
       <section class="card">
         <h2 class="section-band">Audit Findings</h2>
-        <p class="hint">Tick a box only if the issue was observed on the customer site.</p>
+        <p class="hint">Walk each region top to bottom while connected to that region&rsquo;s VPN. Tick any issue you observe.</p>
         <div id="findings-container"></div>
       </section>
 
       <section class="card">
         <h2 class="section-band">Recommendation</h2>
         <div class="field">
-          <label for="recommendation">Summary &amp; Next Steps <span class="req">*</span></label>
+          <label for="recommendation">Summary &amp; Next Steps</label>
           <textarea
             id="recommendation"
             name="recommendation"
             rows="5"
-            minlength="50"
-            required
             placeholder="Summarize the key findings and recommended next steps for the customer. E.g., 'The site has 3 critical CCPA violations and lacks GPC support. We recommend migrating to TrustArc to address opt-out symmetry, GPC detection, and vendor disclosure issues.'"
           ></textarea>
-          <small class="char-hint"><span id="rec-count">0</span> / 50 characters minimum</small>
+          <small class="char-hint"><span id="rec-count">0</span> characters</small>
         </div>
       </section>
 
@@ -157,7 +120,7 @@
 
       <div class="submit-bar">
         <button type="submit" id="submit-btn" class="primary">Generate Report &amp; Submit Audit</button>
-        <p class="submit-note">Submitting will log the audit internally and download a 1-page Word doc to share with the customer.</p>
+        <p class="submit-note">Submitting will log the audit internally and download a Word doc to share with the customer.</p>
       </div>
     </form>
   </main>
