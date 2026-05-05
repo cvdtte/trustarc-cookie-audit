@@ -17,6 +17,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CCPA"],
             explanation: "CCPA requires this exact wording in the footer or banner if the site sells/shares PI. \"Privacy Choices\" or \"Opt Out\" is not sufficient.",
+            howToCheck: "Scroll to the footer of the homepage. Use Ctrl+F to search for \"Do Not Sell.\" Confirm the link reads exactly \"Do Not Sell or Share My Personal Information.\" Variants like \"Privacy Choices,\" \"Opt Out,\" or \"Your California Privacy Rights\" are insufficient.",
             legalText: [
               {
                 source: "Cal. Civ. Code § 1798.135(a)(1)",
@@ -31,6 +32,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CCPA"],
             explanation: "Accept and Reject must have equal visual prominence — same size, color saturation, position. CCPA's Jan 2026 rules treat asymmetry as a dark pattern. Greyed-out Reject = violation.",
+            howToCheck: "Open the cookie banner. Compare Accept and Reject side-by-side. Right-click each → Inspect → check computed CSS for background-color, font-weight, padding, dimensions. If Reject is text-only, greyed out, smaller, or in a less-prominent position than Accept = violation. Squint test: if your eye is drawn instantly to Accept, it fails.",
             legalText: [
               {
                 source: "CCPA Regulations § 7004(a)(2) — Symmetry in Choice",
@@ -55,6 +57,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CIPA"],
             explanation: "Vague language (\"we use analytics partners\") undermines the consent defense under CIPA. Recent CIPA cases turn on this gap. List every vendor by name.",
+            howToCheck: "Open the privacy policy from the footer. Use Ctrl+F to search for tracker names you saw firing in the Network tab (e.g., \"Meta\", \"TikTok\", \"DoubleClick\", \"Adobe\"). Cross-reference against actual third-party calls. If pixels are firing for vendors not named in the policy, the consent defense fails.",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — California Invasion of Privacy Act",
@@ -75,6 +78,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CCPA"],
             explanation: "Use Firefox with GPC enabled (about:config → privacy.globalprivacycontrol.enabled = true) or Brave. Console: navigator.globalPrivacyControl should return true. Check that the site reads this on page load.",
+            howToCheck: "Enable GPC in Firefox (about:config → privacy.globalprivacycontrol.enabled = true) or use Brave (GPC on by default). Visit the site. Open Console: navigator.globalPrivacyControl should return true. Check Network tab → any request → Request Headers → Sec-GPC: 1 should be sent. Then check that the site has any indication it received GPC (e.g., banner state changes, OptanonConsent cookie reflects opt-out).",
             legalText: [
               {
                 source: "CCPA Regulations § 7025(b)",
@@ -89,6 +93,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CCPA"],
             explanation: "This is what Sephora ($1.2M), Honda ($632K), and Disney ($2.75M Feb 2026) were fined for. GPC must be auto-honored as an opt-out. No additional banner click should be required.",
+            howToCheck: "With GPC enabled (Firefox or Brave), open the site. DevTools → Network → click any request → Headers → confirm Sec-GPC: 1 is in Request Headers. Then DO NOT click anything on the banner. Watch the Network tab as you browse: do tracking pixels still fire? Check Application → Cookies → does the consent signal cookie (OptanonConsent, usprivacy, GPP string) reflect opt-out automatically? If GPC is sent but ignored = the Sephora/Honda/Disney pattern.",
             legalText: [
               {
                 source: "CCPA Regulations § 7025(c)",
@@ -96,7 +101,7 @@ const AUDIT_SECTIONS = [
               },
               {
                 source: "Cal. Civ. Code § 1798.135(b)(1)",
-                text: "A business that complies with subdivision (a) is not required to comply with subdivision (b). For purposes of clarity, a business may elect whether to comply with subdivision (a) or subdivision (b). However, a business that responds to opt-out preference signals... in a frictionless manner... shall provide... a means by which the consumer can confirm that their request has been processed by the business."
+                text: "A business that complies with subdivision (a) is not required to comply with subdivision (b)... However, a business that responds to opt-out preference signals... in a frictionless manner... shall provide... a means by which the consumer can confirm that their request has been processed by the business."
               }
             ]
           },
@@ -107,6 +112,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CIPA"],
             explanation: "Under CIPA, any tracking before prior consent risks wiretap claims. Open Application tab → Cookies before clicking the banner — anything beyond essential session/auth is a violation.",
+            howToCheck: "Open the site in a fresh Incognito/Private window. Before clicking anything on the cookie banner: DevTools → Application → Cookies → select the domain. Take a screenshot. Anything beyond strictly necessary (session ID, CSRF token, language preference) appearing here = violation. Look specifically for _ga, _gid, _fbp, _gcl_*, ajs_*, _hjSession*, NID, IDE, _rdt_uuid.",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — CIPA",
@@ -121,6 +127,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CIPA"],
             explanation: "Open DevTools Network on first load, don't click banner, watch for third-party tracker calls. Any hit = CIPA exposure.",
+            howToCheck: "Open Incognito. DevTools → Network → clear → reload → DO NOT click the banner. Filter Network by Domain. Look specifically for: facebook.com/tr, connect.facebook.net, google-analytics.com/collect, googletagmanager.com (container is OK; check what fires from inside it), doubleclick.net, googleadservices.com, tiktok.com/i18n/pixel, analytics.tiktok.com, linkedin.com/li/track, snap.licdn.com. Any of these firing pre-banner-click = violation.",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — CIPA",
@@ -139,6 +146,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CIPA"],
             explanation: "Session replay is the single highest CIPA exposure category. These tools capture keystrokes and form input — they must be gated behind consent.",
+            howToCheck: "Incognito. DevTools → Network → reload → DO NOT click the banner. Look specifically for these endpoints: script.hotjar.com, vc.hotjar.io, www.clarity.ms, c.clarity.ms, fullstory.com, rs.fullstory.com, edge.fullstory.com, cdn.lr-ingest.io, logrocket.io, smartlook.com, mouseflow.com. If any load before banner click = recording keystrokes and form input pre-consent. Also check Console for any Replay/Hotjar/Clarity init log lines.",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — CIPA",
@@ -157,6 +165,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CIPA"],
             explanation: "Type \"test123xyz\" in site search, submit, then Ctrl+F Network tab for \"test123xyz\". If your search term shows up in a request to Meta/Google/TikTok, that's the exact pattern recent CIPA cases target.",
+            howToCheck: "Find the site's search bar (header, navigation, or /search page). Type a unique string like \"test123xyz789\" and submit. DevTools → Network → use the Filter box and enter \"test123xyz789\". If the term appears as a query parameter or POST body in a request to facebook.com, google.com/ads, doubleclick.net, tiktok.com, or any non-first-party domain = CIPA violation (Doe v. GoodRx pattern). Repeat with PII-like input (e.g., a fake email).",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — CIPA (interception of contents in transit)",
@@ -171,6 +180,7 @@ const AUDIT_SECTIONS = [
             severity: "BEST PRACTICE",
             regulations: ["CIPA"],
             explanation: "View Source (Ctrl+U), search for fbq(, gtag(, ttq.. Pixels in raw HTML head can't be gated by GTM consent triggers. Best practice is to move all to a consent-gated tag manager.",
+            howToCheck: "View page source: Ctrl+U (or right-click → View Page Source). In the source, Ctrl+F search for: fbq('init', gtag('config', ttq.load(, snaptr(, _linkedin_data_partner_ids, twq('init'. Pixels in raw HTML <head> initialize before any consent layer can gate them. Best practice: customer should move all into Google Tag Manager (or equivalent) with consent triggers.",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — CIPA (rationale)",
@@ -185,6 +195,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CCPA", "CIPA"],
             explanation: "After clicking Reject (or invoking GPC), navigate to another page. Watch Network tab. Any third-party tracker call = leaky banner. Most common implementation bug.",
+            howToCheck: "Click Reject on the banner (or, if testing GPC, just enable GPC and reload). Then navigate to another page on the site (e.g., /about, /contact, /pricing). DevTools → Network → reload that page. Watch for any third-party tracker calls (same list as pre-consent: facebook.com/tr, google-analytics, doubleclick, tiktok, hotjar). A single call after Reject = leaky banner. Most common implementation bug.",
             legalText: [
               {
                 source: "Cal. Civ. Code § 1798.120(a) — Right to opt out",
@@ -203,6 +214,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["CCPA"],
             explanation: "Even if cookies persist, the consent signal (usprivacy, GPP string, OneTrust's OptanonConsent) must reflect the opt-out. Otherwise downstream systems won't know to stop sharing.",
+            howToCheck: "Click Reject (or enable GPC). DevTools → Application → Cookies → select the domain. Find any of: OptanonConsent (OneTrust), CookieConsent (Cookiebot), euconsent-v2 (TCF), usprivacy (USP — should be \"1YYN\" for opt-out), or the GPP string. Decode the value (use an online IAB GPP/USP decoder if needed). Verify it reflects opt-out. If the signal didn't change after Reject, downstream platforms won't know to stop sharing.",
             legalText: [
               {
                 source: "Cal. Civ. Code § 1798.135(c)(2)",
@@ -230,6 +242,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "GDPR requires a Reject option on the first layer with equal prominence to Accept. Hiding it behind \"Manage Preferences\" is a regulator-confirmed dark pattern (EDPB Cookie Banner Taskforce 2023).",
+            howToCheck: "Visit the site from a fresh Incognito window with EU VPN active. Look at the first banner that appears. Count visible buttons on the first layer. Is there a \"Reject All\" / \"Decline\" / \"Refuse\" button on the same layer as \"Accept All\"? If Reject is hidden behind \"Manage Preferences\" / \"Settings\" / \"Customize\" and requires extra clicks = violation.",
             legalText: [
               {
                 source: "GDPR Art. 4(11) — Definition of consent",
@@ -252,6 +265,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Accept and Reject must have equal visual prominence — same size, color saturation, position. EDPB guidance treats asymmetry as a dark pattern.",
+            howToCheck: "Open the cookie banner. Right-click Accept → Inspect → note background-color, padding, font-weight, dimensions. Repeat for Reject. Compare: same RGB? same dimensions? same position importance? Take a screenshot. The squint test: if your eye is drawn instantly to Accept, it fails the symmetry test. Greyed-out, smaller, or text-link Reject = violation.",
             legalText: [
               {
                 source: "GDPR Art. 4(11)",
@@ -270,6 +284,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Bundled all-or-nothing consent is invalid under GDPR. Users must be able to consent per purpose.",
+            howToCheck: "On the banner, click \"Manage Preferences\" / \"Settings\" / \"Customize.\" Look for separate toggles for at least: Strictly Necessary (always on, can't be turned off), Functional, Performance/Analytics, Targeting/Marketing/Advertising. If only one master toggle, or if categories aren't separable, or if Accept All is the only available option = violation.",
             legalText: [
               {
                 source: "GDPR Art. 6(1)(a)",
@@ -288,6 +303,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Pre-ticked boxes do not constitute valid consent (CJEU Planet49 ruling). Only Strictly Necessary should be on by default.",
+            howToCheck: "From the banner, open \"Manage Preferences\" / \"Settings.\" For each non-Strictly-Necessary toggle (Analytics, Marketing, Targeting, Functional), check whether it's set to ON before the user has clicked anything. Take a screenshot. Any non-Necessary toggle pre-set to ON = invalid consent under Planet49.",
             legalText: [
               {
                 source: "GDPR Recital 32",
@@ -306,6 +322,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "GDPR Article 7(3): withdrawal must be as easy as giving consent. Site needs a persistent UI element to reopen the CMP.",
+            howToCheck: "After accepting cookies (or rejecting), look for a persistent way to reopen the CMP: a floating cookie icon in a corner overlay, or a footer link labeled \"Cookie Settings\" / \"Manage Cookies\" / \"Privacy Choices\" / \"Cookie Preferences.\" Click it — does it reopen the CMP? If you can't easily reopen the consent UI from any page, the customer fails Art. 7(3).",
             legalText: [
               {
                 source: "GDPR Art. 7(3)",
@@ -326,6 +343,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "GDPR Articles 13/14 require transparency about who receives the data. Vague language like \"we use analytics partners\" fails this test.",
+            howToCheck: "Open the privacy policy and any separate cookie policy. Use Ctrl+F to search for specific vendor names you observed firing in Network tab: \"Meta\" / \"Facebook\", \"Google\", \"TikTok\", \"Adobe\", \"Salesforce\", \"Mixpanel\", \"Hotjar.\" Vague phrases like \"we work with selected partners\" or \"third-party analytics\" without naming them = violation. Compare named vendors against actual third-party calls in the Network tab — should match 1:1.",
             legalText: [
               {
                 source: "GDPR Art. 13(1)(e)",
@@ -344,6 +362,7 @@ const AUDIT_SECTIONS = [
             severity: "BEST PRACTICE",
             regulations: ["GDPR"],
             explanation: "Analytics and tracking cookies don't qualify as essential even if anonymized in most EU member states. Customer should reclassify.",
+            howToCheck: "Open \"Manage Preferences\" on the banner. Click into \"Strictly Necessary\" / \"Essential\" to see the cookie list. Check the actual cookies/scripts there: anything related to Google Analytics (_ga, _gid), Hotjar (_hjSession*), Adobe (s_cc, AMCV_*), Facebook (_fbp, fr), advertising IDs = miscategorized. Strictly necessary = session, auth, CSRF, load balancer, locale, security cookies only.",
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
@@ -364,6 +383,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Under GDPR, only essential cookies can be set before consent. Open Application → Cookies before clicking the banner — anything else is a violation.",
+            howToCheck: "Incognito + EU VPN. Open the site. Before clicking the banner: DevTools → Application → Cookies → select the domain. Take a screenshot. Anything beyond strictly necessary (session ID, CSRF, locale) appearing here = violation. Look specifically for _ga, _gid, _fbp, _gcl_*, _hjSession*, NID, IDE, _rdt_uuid.",
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
@@ -378,6 +398,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Open DevTools Network on first load, don't click banner, watch for third-party tracker calls. Any hit = violation.",
+            howToCheck: "Incognito + EU VPN. DevTools → Network → clear → reload → DO NOT click the banner. Watch for third-party calls to: facebook.com/tr, connect.facebook.net, google-analytics.com/collect, doubleclick.net, googleadservices.com, tiktok.com analytics endpoints, linkedin.com/li/track, snap.licdn.com. Any pre-banner-click = violation.",
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
@@ -396,6 +417,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Session replay captures keystrokes and form input — under GDPR it's high-risk processing and must be consent-gated.",
+            howToCheck: "Incognito + EU VPN. DevTools → Network → reload → DO NOT click the banner. Look for: script.hotjar.com, vc.hotjar.io, www.clarity.ms, c.clarity.ms, fullstory.com, rs.fullstory.com, edge.fullstory.com, cdn.lr-ingest.io, logrocket.io, smartlook.com. If any load before banner click = pre-consent recording.",
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
@@ -414,6 +436,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "After clicking Reject, navigate to another page. Watch Network tab. Any third-party tracker call = leaky banner. Most common implementation bug.",
+            howToCheck: "Click Reject All. Navigate to another page on the site (e.g., /about, /contact). DevTools → Network → reload. Watch for any third-party tracker call (same list as pre-consent: facebook.com/tr, google-analytics, doubleclick, tiktok, hotjar). Even one call after Reject = leaky banner. This is the most common implementation bug in OneTrust/Cookiebot integrations where tags aren't properly mapped to consent categories.",
             legalText: [
               {
                 source: "GDPR Art. 7(3)",
@@ -432,6 +455,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Under GDPR opt-in, tracking cookies should never have existed if the user rejected. They must be cleared immediately on Reject.",
+            howToCheck: "Click Reject All. DevTools → Application → Cookies → select the domain. Look for tracking cookies that should not exist post-reject: _ga, _gid, _fbp, _gcl_*, _hjSession*, IDE, NID, _rdt_uuid. Under GDPR opt-in these should never have been set in the first place. They must be cleared immediately on Reject. (Note: under CCPA opt-out, persistence is acceptable as long as the consent signal is updated.)",
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
@@ -463,6 +487,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Quebec's Charter of the French Language (Bill 96) layered with Law 25 requires French-first or fully bilingual banners. Test from a Montreal IP.",
+            howToCheck: "VPN to Montreal. Open the site fresh in Incognito. Look at the banner: button labels, body text, link text. The first language displayed must be French, or the banner must be fully bilingual with French markedly predominant. Examples of compliant button labels: \"Accepter\" / \"Refuser\" / \"Gérer mes préférences.\" If everything is English-only or English is more prominent than French = violation.",
             legalText: [
               {
                 source: "Charter of the French Language (RLRQ c C-11), Art. 52",
@@ -481,6 +506,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Quebec Law 25 requires a Reject option on the first layer with equal prominence to Accept.",
+            howToCheck: "VPN to Montreal. Visit the site fresh in Incognito. Count visible buttons on the first banner. Is \"Refuser\" / \"Reject All\" on the same layer as \"Accepter\" / \"Accept All\"? If Reject is buried behind a Settings or Preferences dialog and requires extra clicks = violation.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14 (as amended by Law 25)",
@@ -495,6 +521,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Buttons must have equal visual prominence — same size, color saturation, position. Asymmetry is a dark pattern under Law 25.",
+            howToCheck: "VPN to Montreal. Open the banner. Right-click each button → Inspect → check computed styles for background-color, dimensions, font-weight, padding. Same RGB? same dimensions? same prominence? Squint test: if your eye is drawn instantly to Accept = fails the symmetry test under s. 14 (\"free\" consent).",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -509,6 +536,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Bundled all-or-nothing consent is invalid under Law 25. Users must be able to consent per purpose.",
+            howToCheck: "From the banner, open Préférences / Customize. Need separate toggles for at least: Nécessaires (always on), Performance/Analytics, Publicité/Marketing. If bundled or only one toggle = violation.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -523,6 +551,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Pre-ticked boxes do not constitute valid consent under Law 25. Only Strictly Necessary should be on by default.",
+            howToCheck: "Open Préférences from the banner. Are non-Nécessaires toggles pre-set to ON? Take a screenshot. Any pre-checked toggle = violation under s. 14 (\"manifest, free, and enlightened\").",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -537,6 +566,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Law 25 requires withdrawal to be as easy as giving consent. Site needs a persistent UI element to reopen the CMP.",
+            howToCheck: "After accepting, look for a persistent way to reopen the banner: a floating cookie icon in a corner overlay, or a footer link labeled \"Préférences cookies\" / \"Cookie Settings\" / \"Gérer mes cookies.\" Click it — does it reopen the CMP? If absent or hard to find = violation.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -557,6 +587,7 @@ const AUDIT_SECTIONS = [
             severity: "BEST PRACTICE",
             regulations: ["Law 25"],
             explanation: "Analytics and tracking cookies don't qualify as essential even if anonymized. Customer should reclassify.",
+            howToCheck: "Open Préférences → \"Nécessaires\" / \"Strictly Necessary.\" Inspect the cookie list. Anything related to analytics (_ga, _hj*), advertising, session replay, or marketing = miscategorized. Strictly necessary = session, auth, CSRF, locale, security only.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -571,6 +602,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Law 25 requires a designated privacy officer with name and contact info publicly available. Generic mailboxes (privacy@company.com) without a named individual are insufficient.",
+            howToCheck: "Open the privacy policy / \"Politique de confidentialité.\" Use Ctrl+F to search for \"Privacy Officer\" / \"Responsable de la protection des renseignements personnels\" / \"Personne responsable.\" Verify a named individual (e.g., \"Jane Doe, Privacy Officer\") with contact info. A generic mailbox like privacy@company.com without a named person = violation under s. 3.1.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 3.1 (as amended by Law 25)",
@@ -585,6 +617,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Law 25 requires explicit disclosure when personal data leaves Quebec, including the destination country and safeguards in place. Most US-hosted sites trigger this.",
+            howToCheck: "Open the privacy policy. Use Ctrl+F to search for: \"United States\" / \"États-Unis\" / \"transfer\" / \"transfert\" / \"cross-border\" / \"hébergement\" / \"hosting.\" Should explicitly state the destination country and what safeguards apply (e.g., \"data is hosted in AWS US-East with contractual safeguards under SCCs\"). Vague language or omission = violation under s. 17. Most US-hosted sites trigger this requirement.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 17 (as amended by Law 25)",
@@ -599,6 +632,7 @@ const AUDIT_SECTIONS = [
             severity: "BEST PRACTICE",
             regulations: ["Law 25", "PIPEDA"],
             explanation: "A compliant CMP shows different banners per region. Identical banner across all regions usually indicates the customer is over-applying (acceptable but suboptimal UX) or under-applying (violation in stricter regions).",
+            howToCheck: "VPN to multiple regions in sequence: California, EU (Paris/Frankfurt), Quebec (Montreal), and rest-of-Canada (Toronto). Visit the site fresh in Incognito from each. Take a screenshot of the banner in each region. Compare side-by-side: identical banners across all 4 regions = no geo-targeting. Under-applying = violations in stricter regions; over-applying (e.g., GDPR-style banner everywhere) = poor UX but not a violation.",
             legalText: [
               {
                 source: "Best practice — derived from multiple regimes",
@@ -619,6 +653,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Under Law 25 opt-in, only essential cookies can be set before consent. Open Application → Cookies before clicking the banner.",
+            howToCheck: "VPN to Montreal. Incognito → load the site → before clicking the banner: DevTools → Application → Cookies → select the domain. Take a screenshot. Anything beyond strictly necessary (session, CSRF, locale) = violation. Look for _ga, _gid, _fbp, _gcl_*, _hjSession*.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 8.1 (as added by Law 25)",
@@ -633,6 +668,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Open DevTools Network on first load, don't click banner, watch for third-party tracker calls. Any hit = violation.",
+            howToCheck: "VPN to Montreal. Incognito → DevTools → Network → reload → DO NOT click the banner. Watch for third-party calls to: facebook.com/tr, connect.facebook.net, google-analytics.com/collect, doubleclick.net, tiktok.com analytics endpoints, linkedin.com/li/track. Any pre-consent call = violation.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 8.1",
@@ -651,6 +687,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Session replay captures keystrokes and form input — under Law 25 it's high-risk processing and must be consent-gated.",
+            howToCheck: "VPN to Montreal. Incognito → Network → reload → DO NOT click the banner. Look for: script.hotjar.com, www.clarity.ms, fullstory.com, logrocket.io. Any pre-consent load = violation under s. 8.1.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 8.1",
@@ -665,6 +702,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "After clicking Reject, navigate to another page. Watch Network tab. Any third-party tracker call = leaky banner.",
+            howToCheck: "VPN to Montreal. Click Refuser / Reject. Navigate to another page. DevTools → Network → reload. Any third-party tracker call after Reject = leaky banner.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -679,6 +717,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Under Law 25 opt-in, tracking cookies should never have existed if the user rejected. They must be cleared immediately.",
+            howToCheck: "VPN to Montreal. Click Refuser / Reject. DevTools → Application → Cookies → select the domain. Look for tracking cookies that should not exist (_ga, _fbp, _gcl_*, _hjSession*). Should be cleared. If they persist = violation under s. 14 / s. 28.1.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -725,6 +764,12 @@ function renderFindings() {
             <p>${escapeHtml(lt.text)}</p>
           </blockquote>
         `).join("");
+        const howToCheckHtml = f.howToCheck
+          ? `<div class="how-to-check" id="how_${fieldId}" hidden>
+              <div class="how-to-check-label">How to check</div>
+              <p>${escapeHtml(f.howToCheck)}</p>
+            </div>`
+          : "";
         return `
           <div class="finding-row">
             <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" />
@@ -733,8 +778,10 @@ function renderFindings() {
                 <label for="finding_${fieldId}" class="finding-label">${descriptorHtml}${escapeHtml(f.label)}</label>
                 <span class="pill ${pillClass}">${pillLabel}</span>
                 <span class="regs">${regs}</span>
-                <button type="button" class="info-toggle" aria-label="Show explanation" data-target="exp_${fieldId}">&#9432;</button>
+                <button type="button" class="info-toggle how-toggle" aria-label="How to check this" data-target="how_${fieldId}" title="How to check">&#128269;</button>
+                <button type="button" class="info-toggle" aria-label="Show explanation and legal text" data-target="exp_${fieldId}" title="Explanation & law">&#9432;</button>
               </div>
+              ${howToCheckHtml}
               <div class="explanation" id="exp_${fieldId}" hidden>
                 <p class="explanation-summary">${escapeHtml(f.explanation)}</p>
                 ${legalBlocks}
@@ -764,7 +811,7 @@ function renderFindings() {
   container.querySelectorAll(".info-toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
       const target = document.getElementById(btn.dataset.target);
-      target.hidden = !target.hidden;
+      if (target) target.hidden = !target.hidden;
     });
   });
 }
