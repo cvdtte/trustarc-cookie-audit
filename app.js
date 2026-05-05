@@ -4,24 +4,28 @@ const AUDIT_SECTIONS = [
   {
     id: "california",
     title: "United States — California Check (CCPA + CIPA)",
-    subtitle: "VPN to California. CCPA = opt-out + GPC. CIPA = pre-consent tracking risks wiretap claims.",
+    subtitle: "VPN to California. Tick any box that applies — checked = non-compliant. CCPA = opt-out + GPC. CIPA = pre-consent tracking risks wiretap claims.",
     categories: [
       {
         id: "visual",
         title: "Visual Check",
         findings: [
           {
-            id: "do_not_sell_missing",
-            descriptor: "DNSMPI Link",
-            label: "\"Do Not Sell or Share My Personal Information\" link missing or wrong wording",
+            id: "no_banner",
+            descriptor: "No Banner",
+            label: "No cookie consent banner displayed at all",
             severity: "REQUIRED",
-            regulations: ["CCPA"],
-            explanation: "CCPA requires this exact wording in the footer or banner if the site sells/shares PI. \"Privacy Choices\" or \"Opt Out\" is not sufficient.",
-            howToCheck: "Scroll to the footer of the homepage. Use Ctrl+F to search for \"Do Not Sell.\" Confirm the link reads exactly \"Do Not Sell or Share My Personal Information.\" Variants like \"Privacy Choices,\" \"Opt Out,\" or \"Your California Privacy Rights\" are insufficient.",
+            regulations: ["CCPA", "CIPA"],
+            explanation: "If the site loads any non-essential cookies, pixels, or trackers but never shows a consent banner, the consent framework has failed completely. CCPA requires a notice at collection; CIPA wiretap claims trigger automatically if any tracking happens without prior consent.",
+            howToCheck: "Open the site in a fresh Incognito window with California VPN active. Wait 5-10 seconds. Look for any cookie banner — top, bottom, modal overlay, or corner widget. If no banner appears, check DevTools → Application → Cookies and DevTools → Network. If trackers are firing or non-essential cookies are being set with no consent UI = automatic violation.",
             legalText: [
               {
-                source: "Cal. Civ. Code § 1798.135(a)(1)",
-                text: "A business that sells consumers' personal information to third parties, or shares consumers' personal information with third parties... shall... Provide a clear and conspicuous link on the business's internet homepages, titled \"Do Not Sell or Share My Personal Information,\" to an internet web page that enables a consumer, or a person authorized by the consumer, to opt out of the sale or sharing of the consumer's personal information."
+                source: "Cal. Civ. Code § 1798.100(a) — Notice at collection",
+                text: "A consumer shall have the right to request that a business that collects a consumer's personal information disclose to that consumer the categories and specific pieces of personal information the business has collected... A business that controls the collection of a consumer's personal information shall, at or before the point of collection, inform consumers of the categories of personal information to be collected and the purposes for which the categories of personal information are collected or used and whether that information is sold or shared."
+              },
+              {
+                source: "Cal. Penal Code § 631(a) — CIPA",
+                text: "Any person who... willfully and without the consent of all parties to the communication... reads, or attempts to read, or to learn the contents or meaning of any message, report, or communication while the same is in transit or passing over any wire, line, or cable... [is liable]."
               }
             ]
           },
@@ -41,6 +45,40 @@ const AUDIT_SECTIONS = [
               {
                 source: "CCPA Regulations § 7004(c) — Dark Patterns",
                 text: "A business's user interface shall be designed and implemented in a way that does not subvert or impair user autonomy, decisionmaking, or choice... Any user interface that has the effect of substantially subverting or impairing user autonomy, decisionmaking, or choice, regardless of a business's intent, is a dark pattern."
+              }
+            ]
+          },
+          {
+            id: "no_reject_first_layer",
+            descriptor: "Reject Button",
+            label: "No \"Reject All\" / \"Decline\" button on first layer of banner",
+            severity: "REQUIRED",
+            regulations: ["CCPA"],
+            explanation: "CCPA's Jan 2026 symmetry-of-choice rules require a clear opt-out option on the first layer with equal prominence to Accept. Hiding Reject behind \"Manage Preferences\" / \"Settings\" is a dark pattern.",
+            howToCheck: "Visit the site fresh in Incognito with California VPN. Look at the first banner that appears. Count visible buttons on the first layer. Is there a \"Reject All\" / \"Decline\" / \"Refuse\" button on the same layer as \"Accept All\"? If Reject is hidden behind \"Manage Preferences\" / \"Settings\" / \"Customize\" and requires extra clicks = violation.",
+            legalText: [
+              {
+                source: "CCPA Regulations § 7004(a)(2) — Symmetry in Choice",
+                text: "Symmetry in choice. The path for a consumer to exercise a more privacy-protective option shall not be longer than the path to exercise a less privacy-protective option."
+              },
+              {
+                source: "CCPA Regulations § 7004(c) — Dark Patterns",
+                text: "A business's user interface shall be designed and implemented in a way that does not subvert or impair user autonomy, decisionmaking, or choice... Any user interface that has the effect of substantially subverting or impairing user autonomy, decisionmaking, or choice, regardless of a business's intent, is a dark pattern."
+              }
+            ]
+          },
+          {
+            id: "do_not_sell_missing",
+            descriptor: "DNSMPI Link",
+            label: "\"Do Not Sell or Share My Personal Information\" link missing or wrong wording",
+            severity: "REQUIRED",
+            regulations: ["CCPA"],
+            explanation: "CCPA requires this exact wording in the footer or banner if the site sells/shares PI. \"Privacy Choices\" or \"Opt Out\" is not sufficient.",
+            howToCheck: "Scroll to the footer of the homepage. Use Ctrl+F to search for \"Do Not Sell.\" Confirm the link reads exactly \"Do Not Sell or Share My Personal Information.\" Variants like \"Privacy Choices,\" \"Opt Out,\" or \"Your California Privacy Rights\" are insufficient.",
+            legalText: [
+              {
+                source: "Cal. Civ. Code § 1798.135(a)(1)",
+                text: "A business that sells consumers' personal information to third parties, or shares consumers' personal information with third parties... shall... Provide a clear and conspicuous link on the business's internet homepages, titled \"Do Not Sell or Share My Personal Information,\" to an internet web page that enables a consumer, or a person authorized by the consumer, to opt out of the sale or sharing of the consumer's personal information."
               }
             ]
           }
@@ -106,32 +144,21 @@ const AUDIT_SECTIONS = [
             ]
           },
           {
-            id: "cookies_before_consent",
-            descriptor: "Pre-Consent Cookies",
-            label: "Non-essential cookies set before user interaction (Application → Cookies)",
+            id: "pre_consent_tracking",
+            descriptor: "Pre-Consent Tracking",
+            label: "Cookies, pixels, or session replay tools loading before user consents",
             severity: "REQUIRED",
             regulations: ["CIPA"],
-            explanation: "Under CIPA, any tracking before prior consent risks wiretap claims. Open Application tab → Cookies before clicking the banner — anything beyond essential session/auth is a violation.",
-            howToCheck: "Open the site in a fresh Incognito/Private window. Before clicking anything on the cookie banner: DevTools → Application → Cookies → select the domain. Take a screenshot. Anything beyond strictly necessary (session ID, CSRF token, language preference) appearing here = violation. Look specifically for _ga, _gid, _fbp, _gcl_*, ajs_*, _hjSession*, NID, IDE, _rdt_uuid.",
+            explanation: "Under CIPA, any tracking before prior consent risks wiretap claims. This covers three things: (1) non-essential cookies set automatically, (2) tracking pixels firing on page load, and (3) session replay tools recording keystrokes. All three must be gated behind explicit consent.",
+            howToCheck: "Incognito + California VPN. Open the site. BEFORE clicking the banner, run three checks: (1) DevTools → Application → Cookies → look for non-essential cookies (_ga, _gid, _fbp, _gcl_*, _hjSession*, NID, IDE, _rdt_uuid). (2) DevTools → Network → look for third-party tracker calls (facebook.com/tr, connect.facebook.net, google-analytics.com/collect, doubleclick.net, tiktok.com analytics, linkedin.com/li/track). (3) Look for session replay endpoints (script.hotjar.com, www.clarity.ms, fullstory.com, edge.fullstory.com, logrocket.io, smartlook.com). Any of these = pre-consent tracking violation.",
             legalText: [
               {
                 source: "Cal. Penal Code § 631(a) — CIPA",
                 text: "Any person who... willfully and without the consent of all parties to the communication, or in any unauthorized manner, reads, or attempts to read, or to learn the contents or meaning of any message, report, or communication while the same is in transit or passing over any wire, line, or cable, or is being sent from, or received at any place within this state... [is liable]."
-              }
-            ]
-          },
-          {
-            id: "pixels_before_consent",
-            descriptor: "Pre-Consent Pixels",
-            label: "Tracking pixels firing before consent (facebook.com/tr, google-analytics, doubleclick, tiktok)",
-            severity: "REQUIRED",
-            regulations: ["CIPA"],
-            explanation: "Open DevTools Network on first load, don't click banner, watch for third-party tracker calls. Any hit = CIPA exposure.",
-            howToCheck: "Open Incognito. DevTools → Network → clear → reload → DO NOT click the banner. Filter Network by Domain. Look specifically for: facebook.com/tr, connect.facebook.net, google-analytics.com/collect, googletagmanager.com (container is OK; check what fires from inside it), doubleclick.net, googleadservices.com, tiktok.com/i18n/pixel, analytics.tiktok.com, linkedin.com/li/track, snap.licdn.com. Any of these firing pre-banner-click = violation.",
-            legalText: [
+              },
               {
-                source: "Cal. Penal Code § 631(a) — CIPA",
-                text: "Any person who... willfully and without the consent of all parties to the communication... reads, or attempts to read, or to learn the contents or meaning of any message... while the same is in transit or passing over any wire, line, or cable... [is liable]."
+                source: "Cal. Penal Code § 632(a) — Eavesdropping on confidential communications (relevant for session replay)",
+                text: "A person who, intentionally and without the consent of all parties to a confidential communication, uses an electronic amplifying or recording device to eavesdrop upon or record the confidential communication... shall be punished by a fine not exceeding two thousand five hundred dollars ($2,500) per violation..."
               },
               {
                 source: "Javier v. Assurance IQ, LLC, 64 F.4th 1083 (9th Cir. 2022)",
@@ -140,85 +167,21 @@ const AUDIT_SECTIONS = [
             ]
           },
           {
-            id: "session_replay_before_consent",
-            descriptor: "Session Replay",
-            label: "Session replay tools loading before consent (Hotjar, Clarity, FullStory, LogRocket)",
-            severity: "REQUIRED",
-            regulations: ["CIPA"],
-            explanation: "Session replay is the single highest CIPA exposure category. These tools capture keystrokes and form input — they must be gated behind consent.",
-            howToCheck: "Incognito. DevTools → Network → reload → DO NOT click the banner. Look specifically for these endpoints: script.hotjar.com, vc.hotjar.io, www.clarity.ms, c.clarity.ms, fullstory.com, rs.fullstory.com, edge.fullstory.com, cdn.lr-ingest.io, logrocket.io, smartlook.com, mouseflow.com. If any load before banner click = recording keystrokes and form input pre-consent. Also check Console for any Replay/Hotjar/Clarity init log lines.",
-            legalText: [
-              {
-                source: "Cal. Penal Code § 631(a) — CIPA",
-                text: "Any person who... willfully and without the consent of all parties... reads, or attempts to read, or to learn the contents or meaning of any message, report, or communication while the same is in transit... [is liable]."
-              },
-              {
-                source: "Cal. Penal Code § 632(a) — Eavesdropping on confidential communications",
-                text: "A person who, intentionally and without the consent of all parties to a confidential communication, uses an electronic amplifying or recording device to eavesdrop upon or record the confidential communication... shall be punished by a fine not exceeding two thousand five hundred dollars ($2,500) per violation..."
-              }
-            ]
-          },
-          {
-            id: "search_bar_forwarding",
-            descriptor: "Search Leakage",
-            label: "Search bar query forwarded to third parties",
-            severity: "REQUIRED",
-            regulations: ["CIPA"],
-            explanation: "Type \"test123xyz\" in site search, submit, then Ctrl+F Network tab for \"test123xyz\". If your search term shows up in a request to Meta/Google/TikTok, that's the exact pattern recent CIPA cases target.",
-            howToCheck: "Find the site's search bar (header, navigation, or /search page). Type a unique string like \"test123xyz789\" and submit. DevTools → Network → use the Filter box and enter \"test123xyz789\". If the term appears as a query parameter or POST body in a request to facebook.com, google.com/ads, doubleclick.net, tiktok.com, or any non-first-party domain = CIPA violation (Doe v. GoodRx pattern). Repeat with PII-like input (e.g., a fake email).",
-            legalText: [
-              {
-                source: "Cal. Penal Code § 631(a) — CIPA (interception of contents in transit)",
-                text: "Any person who... willfully and without the consent of all parties... reads, or attempts to read, or to learn the contents or meaning of any message, report, or communication while the same is in transit or passing over any wire, line, or cable, or is being sent from, or received at any place within this state... [is liable]."
-              }
-            ]
-          },
-          {
-            id: "hardcoded_pixels_head",
-            descriptor: "Hardcoded Pixels",
-            label: "Hard-coded pixels in <head> bypassing tag manager",
-            severity: "BEST PRACTICE",
-            regulations: ["CIPA"],
-            explanation: "View Source (Ctrl+U), search for fbq(, gtag(, ttq.. Pixels in raw HTML head can't be gated by GTM consent triggers. Best practice is to move all to a consent-gated tag manager.",
-            howToCheck: "View page source: Ctrl+U (or right-click → View Page Source). In the source, Ctrl+F search for: fbq('init', gtag('config', ttq.load(, snaptr(, _linkedin_data_partner_ids, twq('init'. Pixels in raw HTML <head> initialize before any consent layer can gate them. Best practice: customer should move all into Google Tag Manager (or equivalent) with consent triggers.",
-            legalText: [
-              {
-                source: "Cal. Penal Code § 631(a) — CIPA (rationale)",
-                text: "Pixels loaded outside a consent management layer cannot be gated by the CMP. Any data they collect before consent is granted falls within CIPA's prohibition on reading the contents of a communication \"while the same is in transit\" without prior consent."
-              }
-            ]
-          },
-          {
-            id: "network_calls_after_reject",
+            id: "post_reject_tracking",
             descriptor: "Post-Reject Tracking",
-            label: "Network calls to ad/marketing endpoints continue firing after Reject/opt-out",
+            label: "Tracking continues after Reject — calls fire and/or cookies persist",
             severity: "REQUIRED",
             regulations: ["CCPA", "CIPA"],
-            explanation: "After clicking Reject (or invoking GPC), navigate to another page. Watch Network tab. Any third-party tracker call = leaky banner. Most common implementation bug.",
-            howToCheck: "Click Reject on the banner (or, if testing GPC, just enable GPC and reload). Then navigate to another page on the site (e.g., /about, /contact, /pricing). DevTools → Network → reload that page. Watch for any third-party tracker calls (same list as pre-consent: facebook.com/tr, google-analytics, doubleclick, tiktok, hotjar). A single call after Reject = leaky banner. Most common implementation bug.",
+            explanation: "After clicking Reject (or invoking GPC), all non-essential tracking should stop. Test by clicking Reject, navigating to another page, and watching both the Network tab and Application → Cookies. (Note: under CCPA opt-out, cookie persistence is acceptable as long as the consent signal cookie like usprivacy or GPP reflects the opt-out.)",
+            howToCheck: "Click Reject on the banner (or, if testing GPC, just enable GPC and reload). Navigate to another page on the site (e.g., /about, /contact). (1) DevTools → Network → reload → watch for third-party tracker calls (facebook.com/tr, google-analytics, doubleclick, tiktok, hotjar). (2) DevTools → Application → Cookies → check that the consent signal cookie (OptanonConsent, usprivacy = \"1YYN\", or GPP string) reflects the opt-out. Either tracker calls firing post-reject OR an unchanged consent signal = leaky banner.",
             legalText: [
               {
                 source: "Cal. Civ. Code § 1798.120(a) — Right to opt out",
                 text: "A consumer shall have the right, at any time, to direct a business that sells or shares personal information about the consumer to third parties not to sell or share the consumer's personal information. This right may be referred to as the right to opt-out of sale or sharing."
               },
               {
-                source: "Cal. Civ. Code § 1798.135(a)(2)(A)",
-                text: "A business that sells or shares personal information... shall... Provide a clear and conspicuous link on the business's internet homepages, titled \"Do Not Sell or Share My Personal Information,\" to an internet web page that enables a consumer... to opt out of the sale or sharing of the consumer's personal information."
-              }
-            ]
-          },
-          {
-            id: "consent_signal_not_updated",
-            descriptor: "Consent Signal",
-            label: "Consent signal cookie not updated after opt-out (usprivacy ≠ 1YYN, GPP/OptanonConsent unchanged)",
-            severity: "REQUIRED",
-            regulations: ["CCPA"],
-            explanation: "Even if cookies persist, the consent signal (usprivacy, GPP string, OneTrust's OptanonConsent) must reflect the opt-out. Otherwise downstream systems won't know to stop sharing.",
-            howToCheck: "Click Reject (or enable GPC). DevTools → Application → Cookies → select the domain. Find any of: OptanonConsent (OneTrust), CookieConsent (Cookiebot), euconsent-v2 (TCF), usprivacy (USP — should be \"1YYN\" for opt-out), or the GPP string. Decode the value (use an online IAB GPP/USP decoder if needed). Verify it reflects opt-out. If the signal didn't change after Reject, downstream platforms won't know to stop sharing.",
-            legalText: [
-              {
                 source: "Cal. Civ. Code § 1798.135(c)(2)",
-                text: "Nothing in this title prohibits a business from complying with subdivision (a). However, a business that complies with subdivision (a) is not required to comply with subdivision (b)... A business shall comply with a consumer's request to opt-out of sale or sharing as soon as feasibly possible, but no later than 15 business days from the date the business receives the request."
+                text: "A business shall comply with a consumer's request to opt-out of sale or sharing as soon as feasibly possible, but no later than 15 business days from the date the business receives the request."
               }
             ]
           }
@@ -229,12 +192,31 @@ const AUDIT_SECTIONS = [
   {
     id: "eu",
     title: "Europe — GDPR Check",
-    subtitle: "VPN to EU (Paris/Frankfurt/Dublin). GDPR is opt-in — nothing tracks before explicit consent.",
+    subtitle: "VPN to EU (Paris/Frankfurt/Dublin). Tick any box that applies — checked = non-compliant. GDPR is opt-in — nothing tracks before explicit consent.",
     categories: [
       {
         id: "visual",
         title: "Visual Check",
         findings: [
+          {
+            id: "no_banner",
+            descriptor: "No Banner",
+            label: "No cookie consent banner displayed at all",
+            severity: "REQUIRED",
+            regulations: ["GDPR"],
+            explanation: "Under GDPR, no non-essential cookie or tracker can be set without prior consent. If there is no banner asking for consent, the only legal state is for nothing non-essential to load. The presence of any tracker without a banner = automatic violation.",
+            howToCheck: "Open the site in fresh Incognito with EU VPN active. Wait 5-10 seconds. Look for any cookie banner — top, bottom, modal overlay, or corner widget. If no banner appears, check DevTools → Application → Cookies (anything beyond session/auth) and DevTools → Network (any third-party tracker call). With no consent UI and any non-essential tracking happening = automatic violation.",
+            legalText: [
+              {
+                source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
+                text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent, having been provided with clear and comprehensive information... in accordance with Directive 95/46/EC, inter alia, about the purposes of the processing."
+              },
+              {
+                source: "GDPR Art. 4(11)",
+                text: "'consent' of the data subject means any freely given, specific, informed and unambiguous indication of the data subject's wishes by which he or she, by a statement or by a clear affirmative action, signifies agreement to the processing of personal data relating to him or her."
+              }
+            ]
+          },
           {
             id: "no_reject_first_layer",
             descriptor: "Reject Button",
@@ -245,7 +227,7 @@ const AUDIT_SECTIONS = [
             howToCheck: "Visit the site from a fresh Incognito window with EU VPN active. Look at the first banner that appears. Count visible buttons on the first layer. Is there a \"Reject All\" / \"Decline\" / \"Refuse\" button on the same layer as \"Accept All\"? If Reject is hidden behind \"Manage Preferences\" / \"Settings\" / \"Customize\" and requires extra clicks = violation.",
             legalText: [
               {
-                source: "GDPR Art. 4(11) — Definition of consent",
+                source: "GDPR Art. 4(11)",
                 text: "'consent' of the data subject means any freely given, specific, informed and unambiguous indication of the data subject's wishes by which he or she, by a statement or by a clear affirmative action, signifies agreement to the processing of personal data relating to him or her."
               },
               {
@@ -265,7 +247,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Accept and Reject must have equal visual prominence — same size, color saturation, position. EDPB guidance treats asymmetry as a dark pattern.",
-            howToCheck: "Open the cookie banner. Right-click Accept → Inspect → note background-color, padding, font-weight, dimensions. Repeat for Reject. Compare: same RGB? same dimensions? same position importance? Take a screenshot. The squint test: if your eye is drawn instantly to Accept, it fails the symmetry test. Greyed-out, smaller, or text-link Reject = violation.",
+            howToCheck: "Open the cookie banner. Right-click Accept → Inspect → note background-color, padding, font-weight, dimensions. Repeat for Reject. Compare: same RGB? same dimensions? same position importance? Take a screenshot. The squint test: if your eye is drawn instantly to Accept, it fails the symmetry test.",
             legalText: [
               {
                 source: "GDPR Art. 4(11)",
@@ -284,7 +266,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["GDPR"],
             explanation: "Bundled all-or-nothing consent is invalid under GDPR. Users must be able to consent per purpose.",
-            howToCheck: "On the banner, click \"Manage Preferences\" / \"Settings\" / \"Customize.\" Look for separate toggles for at least: Strictly Necessary (always on, can't be turned off), Functional, Performance/Analytics, Targeting/Marketing/Advertising. If only one master toggle, or if categories aren't separable, or if Accept All is the only available option = violation.",
+            howToCheck: "On the banner, click \"Manage Preferences\" / \"Settings\" / \"Customize.\" Look for separate toggles for at least: Strictly Necessary (always on, can't be turned off), Functional, Performance/Analytics, Targeting/Marketing/Advertising. If only one master toggle, or if categories aren't separable = violation.",
             legalText: [
               {
                 source: "GDPR Art. 6(1)(a)",
@@ -292,7 +274,7 @@ const AUDIT_SECTIONS = [
               },
               {
                 source: "GDPR Art. 7(2)",
-                text: "If the data subject's consent is given in the context of a written declaration which also concerns other matters, the request for consent shall be presented in a manner which is clearly distinguishable from the other matters, in an intelligible and easily accessible form, using clear and plain language. Any part of such a declaration which constitutes an infringement of this Regulation shall not be binding."
+                text: "If the data subject's consent is given in the context of a written declaration which also concerns other matters, the request for consent shall be presented in a manner which is clearly distinguishable from the other matters, in an intelligible and easily accessible form, using clear and plain language."
               }
             ]
           },
@@ -307,7 +289,7 @@ const AUDIT_SECTIONS = [
             legalText: [
               {
                 source: "GDPR Recital 32",
-                text: "Consent should be given by a clear affirmative act establishing a freely given, specific, informed and unambiguous indication of the data subject's agreement to the processing of personal data relating to him or her, such as by a written statement, including by electronic means, or an oral statement... Silence, pre-ticked boxes or inactivity should not therefore constitute consent."
+                text: "Consent should be given by a clear affirmative act establishing a freely given, specific, informed and unambiguous indication of the data subject's agreement to the processing of personal data relating to him or her... Silence, pre-ticked boxes or inactivity should not therefore constitute consent."
               },
               {
                 source: "CJEU Planet49 GmbH (Case C-673/17, 1 Oct 2019), Operative Part",
@@ -366,7 +348,7 @@ const AUDIT_SECTIONS = [
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
-                text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent, having been provided with clear and comprehensive information... in accordance with Directive 95/46/EC, inter alia, about the purposes of the processing. This shall not prevent any technical storage or access for the sole purpose of carrying out the transmission of a communication over an electronic communications network, or as strictly necessary in order for the provider of an information society service explicitly requested by the subscriber or user to provide the service."
+                text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent... This shall not prevent any technical storage or access for the sole purpose of carrying out the transmission of a communication over an electronic communications network, or as strictly necessary in order for the provider of an information society service explicitly requested by the subscriber or user to provide the service."
               }
             ]
           }
@@ -377,66 +359,36 @@ const AUDIT_SECTIONS = [
         title: "Functional Check",
         findings: [
           {
-            id: "cookies_before_consent",
-            descriptor: "Pre-Consent Cookies",
-            label: "Non-essential cookies set before user interaction (Application → Cookies)",
+            id: "pre_consent_tracking",
+            descriptor: "Pre-Consent Tracking",
+            label: "Cookies, pixels, or session replay tools loading before user consents",
             severity: "REQUIRED",
             regulations: ["GDPR"],
-            explanation: "Under GDPR, only essential cookies can be set before consent. Open Application → Cookies before clicking the banner — anything else is a violation.",
-            howToCheck: "Incognito + EU VPN. Open the site. Before clicking the banner: DevTools → Application → Cookies → select the domain. Take a screenshot. Anything beyond strictly necessary (session ID, CSRF, locale) appearing here = violation. Look specifically for _ga, _gid, _fbp, _gcl_*, _hjSession*, NID, IDE, _rdt_uuid.",
+            explanation: "Under GDPR opt-in, no non-essential tracking can occur before explicit consent. This covers three things: (1) non-essential cookies set automatically, (2) tracking pixels firing on page load, and (3) session replay tools recording keystrokes. All three must be gated behind consent.",
+            howToCheck: "Incognito + EU VPN. Open the site. BEFORE clicking the banner, run three checks: (1) DevTools → Application → Cookies → look for non-essential cookies (_ga, _gid, _fbp, _gcl_*, _hjSession*, NID, IDE, _rdt_uuid). (2) DevTools → Network → look for third-party tracker calls (facebook.com/tr, connect.facebook.net, google-analytics.com/collect, doubleclick.net, tiktok.com analytics, linkedin.com/li/track). (3) Look for session replay endpoints (script.hotjar.com, www.clarity.ms, fullstory.com, edge.fullstory.com, logrocket.io). Any of these = pre-consent tracking violation.",
             legalText: [
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
                 text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent... This shall not prevent any technical storage or access for the sole purpose of carrying out the transmission of a communication over an electronic communications network, or as strictly necessary in order for the provider of an information society service explicitly requested by the subscriber or user to provide the service."
-              }
-            ]
-          },
-          {
-            id: "pixels_before_consent",
-            descriptor: "Pre-Consent Pixels",
-            label: "Tracking pixels firing before consent (facebook.com/tr, google-analytics, doubleclick, tiktok)",
-            severity: "REQUIRED",
-            regulations: ["GDPR"],
-            explanation: "Open DevTools Network on first load, don't click banner, watch for third-party tracker calls. Any hit = violation.",
-            howToCheck: "Incognito + EU VPN. DevTools → Network → clear → reload → DO NOT click the banner. Watch for third-party calls to: facebook.com/tr, connect.facebook.net, google-analytics.com/collect, doubleclick.net, googleadservices.com, tiktok.com analytics endpoints, linkedin.com/li/track, snap.licdn.com. Any pre-banner-click = violation.",
-            legalText: [
-              {
-                source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
-                text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent..."
               },
               {
                 source: "GDPR Art. 6(1)(a)",
                 text: "Processing shall be lawful only if and to the extent that at least one of the following applies: (a) the data subject has given consent to the processing of his or her personal data for one or more specific purposes."
-              }
-            ]
-          },
-          {
-            id: "session_replay_before_consent",
-            descriptor: "Session Replay",
-            label: "Session replay tools loading before consent (Hotjar, Clarity, FullStory, LogRocket)",
-            severity: "REQUIRED",
-            regulations: ["GDPR"],
-            explanation: "Session replay captures keystrokes and form input — under GDPR it's high-risk processing and must be consent-gated.",
-            howToCheck: "Incognito + EU VPN. DevTools → Network → reload → DO NOT click the banner. Look for: script.hotjar.com, vc.hotjar.io, www.clarity.ms, c.clarity.ms, fullstory.com, rs.fullstory.com, edge.fullstory.com, cdn.lr-ingest.io, logrocket.io, smartlook.com. If any load before banner click = pre-consent recording.",
-            legalText: [
-              {
-                source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
-                text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent..."
               },
               {
-                source: "GDPR Art. 9(1) — Special categories of personal data",
+                source: "GDPR Art. 9(1) — Special categories of personal data (relevant for session replay)",
                 text: "Processing of personal data revealing racial or ethnic origin, political opinions, religious or philosophical beliefs, or trade union membership, and the processing of genetic data, biometric data for the purpose of uniquely identifying a natural person, data concerning health or data concerning a natural person's sex life or sexual orientation shall be prohibited."
               }
             ]
           },
           {
-            id: "network_calls_after_reject",
+            id: "post_reject_tracking",
             descriptor: "Post-Reject Tracking",
-            label: "Network calls to ad/marketing endpoints continue firing after Reject",
+            label: "Tracking continues after Reject — calls fire and/or cookies persist",
             severity: "REQUIRED",
             regulations: ["GDPR"],
-            explanation: "After clicking Reject, navigate to another page. Watch Network tab. Any third-party tracker call = leaky banner. Most common implementation bug.",
-            howToCheck: "Click Reject All. Navigate to another page on the site (e.g., /about, /contact). DevTools → Network → reload. Watch for any third-party tracker call (same list as pre-consent: facebook.com/tr, google-analytics, doubleclick, tiktok, hotjar). Even one call after Reject = leaky banner. This is the most common implementation bug in OneTrust/Cookiebot integrations where tags aren't properly mapped to consent categories.",
+            explanation: "After clicking Reject, all non-essential tracking must stop and any tracking cookies must be cleared. Test by clicking Reject, then navigating to another page and watching both the Network tab and Application → Cookies.",
+            howToCheck: "Click Reject All. Navigate to another page on the site (e.g., /about, /contact). (1) DevTools → Network → reload that page → watch for any third-party tracker call (facebook.com/tr, google-analytics, doubleclick, tiktok, hotjar). Even one call after Reject = leaky banner. (2) DevTools → Application → Cookies → look for tracking cookies that should not exist post-reject (_ga, _gid, _fbp, _gcl_*, _hjSession*, IDE, NID). Under GDPR opt-in these should never have been set or must be cleared on Reject.",
             legalText: [
               {
                 source: "GDPR Art. 7(3)",
@@ -445,25 +397,10 @@ const AUDIT_SECTIONS = [
               {
                 source: "GDPR Art. 17(1)(b) — Right to erasure",
                 text: "The data subject shall have the right to obtain from the controller the erasure of personal data concerning him or her without undue delay and the controller shall have the obligation to erase personal data without undue delay where one of the following grounds applies:... (b) the data subject withdraws consent on which the processing is based according to point (a) of Article 6(1) or point (a) of Article 9(2), and where there is no other legal ground for the processing."
-              }
-            ]
-          },
-          {
-            id: "cookies_persist_optin",
-            descriptor: "Cookie Persistence",
-            label: "Tracking cookies persist after Reject",
-            severity: "REQUIRED",
-            regulations: ["GDPR"],
-            explanation: "Under GDPR opt-in, tracking cookies should never have existed if the user rejected. They must be cleared immediately on Reject.",
-            howToCheck: "Click Reject All. DevTools → Application → Cookies → select the domain. Look for tracking cookies that should not exist post-reject: _ga, _gid, _fbp, _gcl_*, _hjSession*, IDE, NID, _rdt_uuid. Under GDPR opt-in these should never have been set in the first place. They must be cleared immediately on Reject. (Note: under CCPA opt-out, persistence is acceptable as long as the consent signal is updated.)",
-            legalText: [
+              },
               {
                 source: "ePrivacy Directive 2002/58/EC, Art. 5(3)",
                 text: "Member States shall ensure that the storing of information, or the gaining of access to information already stored, in the terminal equipment of a subscriber or user is only allowed on condition that the subscriber or user concerned has given his or her consent..."
-              },
-              {
-                source: "GDPR Art. 17(1)(b) — Right to erasure",
-                text: "The data subject shall have the right to obtain from the controller the erasure of personal data concerning him or her without undue delay... where... (b) the data subject withdraws consent on which the processing is based... and where there is no other legal ground for the processing."
               }
             ]
           }
@@ -474,12 +411,31 @@ const AUDIT_SECTIONS = [
   {
     id: "canada",
     title: "Canada — Quebec Law 25 + PIPEDA Check",
-    subtitle: "VPN to Montreal for Quebec (opt-in + French). Toronto for rest-of-Canada PIPEDA. Quebec is the strictest.",
+    subtitle: "VPN to Montreal for Quebec (opt-in + French). Toronto for rest-of-Canada PIPEDA. Tick any box that applies — checked = non-compliant.",
     categories: [
       {
         id: "visual",
         title: "Visual Check",
         findings: [
+          {
+            id: "no_banner",
+            descriptor: "No Banner",
+            label: "No cookie consent banner displayed at all",
+            severity: "REQUIRED",
+            regulations: ["Law 25"],
+            explanation: "Quebec Law 25 requires informed, manifest, free consent before any personal-information-collecting technology is used. No banner = no consent UI = automatic violation if any tracking happens.",
+            howToCheck: "VPN to Montreal. Open the site in fresh Incognito. Wait 5-10 seconds. Look for any cookie banner. If no banner appears, check DevTools → Application → Cookies (anything beyond session/auth) and DevTools → Network (any third-party tracker call). With no consent UI and any non-essential tracking happening = automatic violation.",
+            legalText: [
+              {
+                source: "Act respecting the protection of personal information in the private sector, s. 8.1 (as added by Law 25)",
+                text: "Any person carrying on an enterprise who collects personal information from the person concerned using technology that includes functions allowing the person concerned to be identified, located or profiled must first inform the person of (1) the use of such technology; and (2) the means available to activate the functions that allow a person to be identified, located or profiled."
+              },
+              {
+                source: "Act respecting the protection of personal information in the private sector, s. 14",
+                text: "Consent must be manifest, free, and enlightened, and must be given for specific purposes. It must be requested for each such purpose, in clear and simple language."
+              }
+            ]
+          },
           {
             id: "banner_not_french_qc",
             descriptor: "French Language",
@@ -487,7 +443,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Quebec's Charter of the French Language (Bill 96) layered with Law 25 requires French-first or fully bilingual banners. Test from a Montreal IP.",
-            howToCheck: "VPN to Montreal. Open the site fresh in Incognito. Look at the banner: button labels, body text, link text. The first language displayed must be French, or the banner must be fully bilingual with French markedly predominant. Examples of compliant button labels: \"Accepter\" / \"Refuser\" / \"Gérer mes préférences.\" If everything is English-only or English is more prominent than French = violation.",
+            howToCheck: "VPN to Montreal. Open the site fresh in Incognito. Look at the banner: button labels, body text, link text. The first language displayed must be French, or the banner must be fully bilingual with French markedly predominant. Compliant button labels: \"Accepter\" / \"Refuser\" / \"Gérer mes préférences.\" If everything is English-only or English is more prominent than French = violation.",
             legalText: [
               {
                 source: "Charter of the French Language (RLRQ c C-11), Art. 52",
@@ -617,7 +573,7 @@ const AUDIT_SECTIONS = [
             severity: "REQUIRED",
             regulations: ["Law 25"],
             explanation: "Law 25 requires explicit disclosure when personal data leaves Quebec, including the destination country and safeguards in place. Most US-hosted sites trigger this.",
-            howToCheck: "Open the privacy policy. Use Ctrl+F to search for: \"United States\" / \"États-Unis\" / \"transfer\" / \"transfert\" / \"cross-border\" / \"hébergement\" / \"hosting.\" Should explicitly state the destination country and what safeguards apply (e.g., \"data is hosted in AWS US-East with contractual safeguards under SCCs\"). Vague language or omission = violation under s. 17. Most US-hosted sites trigger this requirement.",
+            howToCheck: "Open the privacy policy. Use Ctrl+F to search for: \"United States\" / \"États-Unis\" / \"transfer\" / \"transfert\" / \"cross-border\" / \"hébergement\" / \"hosting.\" Should explicitly state the destination country and what safeguards apply. Vague language or omission = violation under s. 17.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 17 (as amended by Law 25)",
@@ -632,7 +588,7 @@ const AUDIT_SECTIONS = [
             severity: "BEST PRACTICE",
             regulations: ["Law 25", "PIPEDA"],
             explanation: "A compliant CMP shows different banners per region. Identical banner across all regions usually indicates the customer is over-applying (acceptable but suboptimal UX) or under-applying (violation in stricter regions).",
-            howToCheck: "VPN to multiple regions in sequence: California, EU (Paris/Frankfurt), Quebec (Montreal), and rest-of-Canada (Toronto). Visit the site fresh in Incognito from each. Take a screenshot of the banner in each region. Compare side-by-side: identical banners across all 4 regions = no geo-targeting. Under-applying = violations in stricter regions; over-applying (e.g., GDPR-style banner everywhere) = poor UX but not a violation.",
+            howToCheck: "VPN to multiple regions in sequence: California, EU (Paris/Frankfurt), Quebec (Montreal), and rest-of-Canada (Toronto). Visit the site fresh in Incognito from each. Take a screenshot of the banner in each region. Identical banners across all 4 regions = no geo-targeting.",
             legalText: [
               {
                 source: "Best practice — derived from multiple regimes",
@@ -647,32 +603,17 @@ const AUDIT_SECTIONS = [
         title: "Functional Check",
         findings: [
           {
-            id: "cookies_before_consent",
-            descriptor: "Pre-Consent Cookies",
-            label: "Non-essential cookies set before user interaction (Application → Cookies)",
+            id: "pre_consent_tracking",
+            descriptor: "Pre-Consent Tracking",
+            label: "Cookies, pixels, or session replay tools loading before user consents",
             severity: "REQUIRED",
             regulations: ["Law 25"],
-            explanation: "Under Law 25 opt-in, only essential cookies can be set before consent. Open Application → Cookies before clicking the banner.",
-            howToCheck: "VPN to Montreal. Incognito → load the site → before clicking the banner: DevTools → Application → Cookies → select the domain. Take a screenshot. Anything beyond strictly necessary (session, CSRF, locale) = violation. Look for _ga, _gid, _fbp, _gcl_*, _hjSession*.",
+            explanation: "Under Law 25 opt-in, no non-essential tracking can occur before explicit consent. This covers three things: (1) non-essential cookies set automatically, (2) tracking pixels firing on page load, and (3) session replay tools recording keystrokes. All three must be gated behind consent.",
+            howToCheck: "VPN to Montreal. Incognito → load the site → BEFORE clicking the banner, run three checks: (1) DevTools → Application → Cookies → look for non-essential cookies (_ga, _gid, _fbp, _gcl_*, _hjSession*). (2) DevTools → Network → look for third-party tracker calls (facebook.com/tr, google-analytics.com/collect, doubleclick.net, tiktok.com analytics). (3) Look for session replay endpoints (script.hotjar.com, www.clarity.ms, fullstory.com, logrocket.io). Any of these = pre-consent tracking violation.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 8.1 (as added by Law 25)",
                 text: "Any person carrying on an enterprise who collects personal information from the person concerned using technology that includes functions allowing the person concerned to be identified, located or profiled must first inform the person of (1) the use of such technology; and (2) the means available to activate the functions that allow a person to be identified, located or profiled."
-              }
-            ]
-          },
-          {
-            id: "pixels_before_consent",
-            descriptor: "Pre-Consent Pixels",
-            label: "Tracking pixels firing before consent (facebook.com/tr, google-analytics, doubleclick, tiktok)",
-            severity: "REQUIRED",
-            regulations: ["Law 25"],
-            explanation: "Open DevTools Network on first load, don't click banner, watch for third-party tracker calls. Any hit = violation.",
-            howToCheck: "VPN to Montreal. Incognito → DevTools → Network → reload → DO NOT click the banner. Watch for third-party calls to: facebook.com/tr, connect.facebook.net, google-analytics.com/collect, doubleclick.net, tiktok.com analytics endpoints, linkedin.com/li/track. Any pre-consent call = violation.",
-            legalText: [
-              {
-                source: "Act respecting the protection of personal information in the private sector, s. 8.1",
-                text: "Any person carrying on an enterprise who collects personal information from the person concerned using technology that includes functions allowing the person concerned to be identified, located or profiled must first inform the person..."
               },
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 12",
@@ -681,43 +622,13 @@ const AUDIT_SECTIONS = [
             ]
           },
           {
-            id: "session_replay_before_consent",
-            descriptor: "Session Replay",
-            label: "Session replay tools loading before consent (Hotjar, Clarity, FullStory, LogRocket)",
-            severity: "REQUIRED",
-            regulations: ["Law 25"],
-            explanation: "Session replay captures keystrokes and form input — under Law 25 it's high-risk processing and must be consent-gated.",
-            howToCheck: "VPN to Montreal. Incognito → Network → reload → DO NOT click the banner. Look for: script.hotjar.com, www.clarity.ms, fullstory.com, logrocket.io. Any pre-consent load = violation under s. 8.1.",
-            legalText: [
-              {
-                source: "Act respecting the protection of personal information in the private sector, s. 8.1",
-                text: "Any person carrying on an enterprise who collects personal information from the person concerned using technology that includes functions allowing the person concerned to be identified, located or profiled must first inform the person of (1) the use of such technology; and (2) the means available to activate the functions that allow a person to be identified, located or profiled."
-              }
-            ]
-          },
-          {
-            id: "network_calls_after_reject",
+            id: "post_reject_tracking",
             descriptor: "Post-Reject Tracking",
-            label: "Network calls to ad/marketing endpoints continue firing after Reject",
+            label: "Tracking continues after Reject — calls fire and/or cookies persist",
             severity: "REQUIRED",
             regulations: ["Law 25"],
-            explanation: "After clicking Reject, navigate to another page. Watch Network tab. Any third-party tracker call = leaky banner.",
-            howToCheck: "VPN to Montreal. Click Refuser / Reject. Navigate to another page. DevTools → Network → reload. Any third-party tracker call after Reject = leaky banner.",
-            legalText: [
-              {
-                source: "Act respecting the protection of personal information in the private sector, s. 14",
-                text: "Consent is valid only for the time necessary to achieve the purposes for which it was requested. Consent that is not given in accordance with this Act is without effect."
-              }
-            ]
-          },
-          {
-            id: "cookies_persist_optin",
-            descriptor: "Cookie Persistence",
-            label: "Tracking cookies persist after Reject",
-            severity: "REQUIRED",
-            regulations: ["Law 25"],
-            explanation: "Under Law 25 opt-in, tracking cookies should never have existed if the user rejected. They must be cleared immediately.",
-            howToCheck: "VPN to Montreal. Click Refuser / Reject. DevTools → Application → Cookies → select the domain. Look for tracking cookies that should not exist (_ga, _fbp, _gcl_*, _hjSession*). Should be cleared. If they persist = violation under s. 14 / s. 28.1.",
+            explanation: "After clicking Reject, all non-essential tracking must stop and any tracking cookies must be cleared.",
+            howToCheck: "VPN to Montreal. Click Refuser / Reject. Navigate to another page on the site. (1) DevTools → Network → reload → watch for any third-party tracker call. Even one call after Reject = leaky banner. (2) DevTools → Application → Cookies → look for tracking cookies that should not exist (_ga, _fbp, _gcl_*, _hjSession*). Should be cleared.",
             legalText: [
               {
                 source: "Act respecting the protection of personal information in the private sector, s. 14",
@@ -772,7 +683,7 @@ function renderFindings() {
           : "";
         return `
           <div class="finding-row">
-            <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" />
+            <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" aria-label="Mark non-compliant: ${escapeHtml(f.descriptor || f.label)}" />
             <div class="finding-body">
               <div class="finding-head">
                 <label for="finding_${fieldId}" class="finding-label">${descriptorHtml}${escapeHtml(f.label)}</label>
