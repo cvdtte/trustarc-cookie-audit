@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cookie Consent Audit — TrustArc</title>
+  <title>Cookie Consent Health Checker — TrustArc</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="page-header">
-    <h1>Cookie Consent Audit</h1>
-    <p class="subtitle">TrustArc Sales Engineer Audit Tool</p>
+    <h1>Cookie Consent Health Checker</h1>
     <p class="instructions">
       Walk through each region&rsquo;s checklist on the customer site. Tick any
       finding observed. When complete, click <strong>Generate Report</strong> &mdash;
@@ -61,35 +60,37 @@
           </div>
 
           <div class="field">
-            <label for="current_cmp">Current CMP Detected</label>
+            <label for="current_cmp">Current Cookie Banner Detected</label>
             <select id="current_cmp" name="current_cmp">
               <option value="">&mdash; Select &mdash;</option>
-              <option>OneTrust</option>
-              <option>TrustArc</option>
               <option>Cookiebot</option>
-              <option>Usercentrics</option>
-              <option>Didomi</option>
-              <option>Sourcepoint</option>
-              <option>Quantcast</option>
-              <option>Osano</option>
               <option>CookieYes</option>
-              <option>Iubenda</option>
-              <option>Termly</option>
               <option>Custom/Homemade</option>
+              <option>Didomi</option>
+              <option>Evidon</option>
+              <option>HubSpot Banner</option>
+              <option>Iubenda</option>
+              <option>OneTrust</option>
+              <option>Osano</option>
+              <option>Quantcast</option>
+              <option>Sourcepoint</option>
+              <option>Termly</option>
+              <option>TrustArc</option>
+              <option>Usercentrics</option>
               <option value="Other">Other (specify)</option>
             </select>
-            <input type="text" id="current_cmp_other" name="current_cmp_other" placeholder="Specify CMP" hidden />
+            <input type="text" id="current_cmp_other" name="current_cmp_other" placeholder="Specify cookie banner" hidden />
           </div>
         </div>
 
         <details class="cmp-help">
-          <summary>How to identify the CMP</summary>
+          <summary>How to identify the cookie banner</summary>
           <div class="cmp-help-body">
             <p><strong>Three ways to detect:</strong></p>
             <ol>
               <li><strong>Elements tab</strong> &mdash; Ctrl+F &rarr; search <code>cookie</code>, <code>consent</code>, <code>banner</code>. Look at IDs/classes.</li>
-              <li><strong>Console probe</strong> &mdash; paste <code>window.OneTrust</code>, <code>window.truste</code>, <code>window.Cookiebot</code>, <code>window.UC_UI</code>, <code>window.Didomi</code>, <code>window.Osano</code>, <code>window.__tcfapi</code>, <code>window.__gpp</code> &mdash; whichever returns a defined object identifies the CMP.</li>
-              <li><strong>Network tab</strong> &mdash; filter by Domain &rarr; look for <code>cookielaw.org</code>, <code>trustarc.com</code>, <code>cookiebot.com</code>, <code>usercentrics.eu</code>, <code>didomi.io</code>, <code>sp-prod.net</code>, <code>quantcast.com</code>, <code>osano.com</code>, etc.</li>
+              <li><strong>Console probe</strong> &mdash; paste <code>window.OneTrust</code>, <code>window.truste</code>, <code>window.Cookiebot</code>, <code>window.UC_UI</code>, <code>window.Didomi</code>, <code>window.Osano</code>, <code>window.evidon</code>, <code>window.__tcfapi</code>, <code>window.__gpp</code> &mdash; whichever returns a defined object identifies the banner.</li>
+              <li><strong>Network tab</strong> &mdash; filter by Domain &rarr; look for <code>cookielaw.org</code>, <code>trustarc.com</code>, <code>cookiebot.com</code>, <code>usercentrics.eu</code>, <code>didomi.io</code>, <code>sp-prod.net</code>, <code>quantcast.com</code>, <code>osano.com</code>, <code>evidon.com</code>, <code>hs-banner.com</code>, etc.</li>
             </ol>
           </div>
         </details>

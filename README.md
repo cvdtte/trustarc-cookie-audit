@@ -1,8 +1,14 @@
-# Cookie Consent Audit Tool
+# Cookie Consent Health Checker
 
 A static web app that lets TrustArc Sales Engineers audit a customer website for
-privacy compliance and produce a 1-page Word doc report. Every audit is logged
-to Netlify Forms so management has a record of every report run.
+privacy compliance and produce a Word doc report. Every audit is logged to
+Netlify Forms so management has a record of every report run.
+
+Findings are organized by region (California / EU / Canada) and within each
+region by category (Visual / Organizational / Functional), so an SE can VPN to
+one region and walk straight down the list. Every finding includes its severity
+(REQUIRED / BEST PRACTICE), the regulations it covers, an explanation, and a
+citation to the underlying statute or case.
 
 ## What it does
 
