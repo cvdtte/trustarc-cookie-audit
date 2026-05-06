@@ -685,9 +685,10 @@ function renderFindings() {
         return `
           <div class="finding-row">
             <div class="status-checks">
-              <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" class="status-x" aria-label="Mark non-compliant: ${escapeHtml(f.descriptor || f.label)}" />
               <input type="checkbox" id="pass_${fieldId}" name="pass_${fieldId}" value="true" class="status-pass-input" data-pass-note="${escapeHtml(passNote)}" aria-label="Mark compliant: ${escapeHtml(f.descriptor || f.label)}" />
-              <label for="pass_${fieldId}" class="pass-button">Pass</label>
+              <label for="pass_${fieldId}" class="status-pill pass-button">Pass</label>
+              <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" class="status-fail-input" aria-label="Mark non-compliant: ${escapeHtml(f.descriptor || f.label)}" />
+              <label for="finding_${fieldId}" class="status-pill fail-button">Fail</label>
             </div>
             <div class="finding-body">
               <div class="finding-head">
@@ -731,10 +732,12 @@ function renderFindings() {
     });
   });
 
-  // Mutual exclusion + auto-note for the X / Pass-button pair.
-  container.querySelectorAll(".status-x").forEach((xBox) => {
+  // Mutual exclusion + auto-note for the Pass / Fail pill buttons.
+  // Both pills are visually-hidden checkboxes (.status-pass-input,
+  // .status-fail-input) driven by adjacent <label class=*-button> siblings.
+  container.querySelectorAll(".status-fail-input").forEach((xBox) => {
     const fieldId = xBox.id.replace(/^finding_/, "");
-    const passBox = container.querySelector(`#pass_${fieldId}`); // hidden checkbox driven by the pass-button label
+    const passBox = container.querySelector(`#pass_${fieldId}`);
     const noteInput = container.querySelector(`[name="note_${fieldId}"]`);
 
     xBox.addEventListener("change", () => {

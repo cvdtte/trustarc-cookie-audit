@@ -259,7 +259,7 @@ main {
 
 .finding-row {
   display: grid;
-  grid-template-columns: 92px 1fr;
+  grid-template-columns: 140px 1fr;
   gap: 14px;
   padding: 11px 0;
   border-top: 1px solid #eef0f4;
@@ -276,46 +276,13 @@ main {
 
 .finding-row:first-of-type { border-top: 0; }
 
-/* X — non-compliant (red checkbox) */
-.finding-row input[type="checkbox"].status-x {
-  appearance: none;
-  -webkit-appearance: none;
-  margin: 0;
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--border);
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  position: relative;
-  flex-shrink: 0;
-  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
-}
-.finding-row .status-x:hover { border-color: var(--required); }
-.finding-row .status-x:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(192, 0, 0, 0.22);
-  border-color: var(--required);
-}
-.finding-row .status-x:checked {
-  background: var(--required);
-  border-color: var(--required);
-}
-.finding-row .status-x:checked::after {
-  content: "\2715";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -52%);
-  color: #fff;
-  font-weight: 900;
-  font-size: 14px;
-  line-height: 1;
-}
-
-/* Pass — pill-shaped grey button that turns green when active.
-   Driven by the visually-hidden .status-pass-input checkbox sibling. */
-.status-pass-input {
+/* Pass / Fail pills.
+   Each is a visually-hidden checkbox + a labelled <label class="status-pill">
+   immediately after it; CSS sibling selectors flip the pill's colours when
+   its checkbox is :checked. The wrapper .status-checks lays them out
+   horizontally with Pass on the left, Fail on the right. */
+.status-pass-input,
+.status-fail-input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -327,12 +294,12 @@ main {
   border: 0;
 }
 
-.pass-button {
+.status-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 22px;
-  padding: 0 12px;
+  height: 24px;
+  padding: 0 14px;
   border: 1.5px solid var(--border);
   border-radius: 12px;
   background: #f1f3f5;
@@ -346,20 +313,31 @@ main {
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.pass-button:hover {
+.status-pill:hover {
   background: #e6e9ed;
   color: #2a2c40;
   border-color: #c9cdd3;
 }
 
+/* Pass — green when active */
 .status-pass-input:focus-visible + .pass-button {
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22);
   border-color: #16A34A;
 }
-
 .status-pass-input:checked + .pass-button {
   background: #16A34A;
   border-color: #16A34A;
+  color: #fff;
+}
+
+/* Fail — red when active */
+.status-fail-input:focus-visible + .fail-button {
+  box-shadow: 0 0 0 3px rgba(192, 0, 0, 0.22);
+  border-color: var(--required);
+}
+.status-fail-input:checked + .fail-button {
+  background: var(--required);
+  border-color: var(--required);
   color: #fff;
 }
 
