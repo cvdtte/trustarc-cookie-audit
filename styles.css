@@ -259,19 +259,27 @@ main {
 
 .finding-row {
   display: grid;
-  grid-template-columns: 26px 1fr;
-  gap: 12px;
+  grid-template-columns: 60px 1fr;
+  gap: 14px;
   padding: 11px 0;
   border-top: 1px solid #eef0f4;
   align-items: start;
 }
 
+.status-checks {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  margin-top: 2px;
+}
+
 .finding-row:first-of-type { border-top: 0; }
 
-.finding-row input[type="checkbox"] {
+.finding-row input[type="checkbox"].status-x,
+.finding-row input[type="checkbox"].status-pass {
   appearance: none;
   -webkit-appearance: none;
-  margin: 2px 0 0;
+  margin: 0;
   width: 22px;
   height: 22px;
   border: 2px solid var(--border);
@@ -283,22 +291,18 @@ main {
   transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
 }
 
-.finding-row input[type="checkbox"]:hover {
-  border-color: var(--required);
-}
-
-.finding-row input[type="checkbox"]:focus-visible {
+/* X — non-compliant (red) */
+.finding-row .status-x:hover { border-color: var(--required); }
+.finding-row .status-x:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(192, 0, 0, 0.22);
   border-color: var(--required);
 }
-
-.finding-row input[type="checkbox"]:checked {
+.finding-row .status-x:checked {
   background: var(--required);
   border-color: var(--required);
 }
-
-.finding-row input[type="checkbox"]:checked::after {
+.finding-row .status-x:checked::after {
   content: "\2715";
   position: absolute;
   top: 50%;
@@ -307,6 +311,29 @@ main {
   color: #fff;
   font-weight: 900;
   font-size: 14px;
+  line-height: 1;
+}
+
+/* Pass — compliant (green) */
+.finding-row .status-pass:hover { border-color: #16A34A; }
+.finding-row .status-pass:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22);
+  border-color: #16A34A;
+}
+.finding-row .status-pass:checked {
+  background: #16A34A;
+  border-color: #16A34A;
+}
+.finding-row .status-pass:checked::after {
+  content: "\2713";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  color: #fff;
+  font-weight: 900;
+  font-size: 15px;
   line-height: 1;
 }
 

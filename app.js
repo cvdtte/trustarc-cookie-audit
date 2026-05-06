@@ -681,9 +681,13 @@ function renderFindings() {
               <p>${escapeHtml(f.howToCheck)}</p>
             </div>`
           : "";
+        const passNote = PASS_NOTES[f.id] || "";
         return `
           <div class="finding-row">
-            <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" aria-label="Mark non-compliant: ${escapeHtml(f.descriptor || f.label)}" />
+            <div class="status-checks">
+              <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" class="status-x" aria-label="Mark non-compliant: ${escapeHtml(f.descriptor || f.label)}" />
+              <input type="checkbox" id="pass_${fieldId}" name="pass_${fieldId}" value="true" class="status-pass" data-pass-note="${escapeHtml(passNote)}" aria-label="Mark compliant: ${escapeHtml(f.descriptor || f.label)}" />
+            </div>
             <div class="finding-body">
               <div class="finding-head">
                 <label for="finding_${fieldId}" class="finding-label">${descriptorHtml}${escapeHtml(f.label)}</label>
@@ -725,6 +729,44 @@ function renderFindings() {
       if (target) target.hidden = !target.hidden;
     });
   });
+
+  // Mutual exclusion + auto-note for the X / Pass checkbox pair.
+  container.querySelectorAll(".status-x").forEach((xBox) => {
+    const fieldId = xBox.id.replace(/^finding_/, "");
+    const passBox = container.querySelector(`#pass_${fieldId}`);
+    const noteInput = container.querySelector(`[name="note_${fieldId}"]`);
+
+    xBox.addEventListener("change", () => {
+      if (xBox.checked && passBox) passBox.checked = false;
+    });
+
+    if (passBox) {
+      passBox.addEventListener("change", () => {
+        if (passBox.checked) {
+          xBox.checked = false;
+          const passNote = passBox.dataset.passNote || "";
+          // Only auto-fill if the field is empty or carries a previous auto-fill.
+          if (passNote && (!noteInput.value.trim() || noteInput.dataset.autoFilled === "true")) {
+            noteInput.value = passNote;
+            noteInput.dataset.autoFilled = "true";
+          }
+        } else if (noteInput.dataset.autoFilled === "true") {
+          // Clearing Pass clears the auto-filled note (manual edits are kept).
+          noteInput.value = "";
+          delete noteInput.dataset.autoFilled;
+        }
+      });
+    }
+
+    if (noteInput) {
+      // If the SE edits the note manually, stop tracking it as auto-filled.
+      noteInput.addEventListener("input", () => {
+        if (noteInput.dataset.autoFilled === "true" && noteInput.value !== (passBox && passBox.dataset.passNote)) {
+          delete noteInput.dataset.autoFilled;
+        }
+      });
+    }
+  });
 }
 
 /* ---------- Init ---------- */
@@ -757,28 +799,28 @@ function collectFormData() {
   const form = document.getElementById("audit-form");
   const fd = new FormData(form);
 
-  const checkedSections = [];
-  for (const sec of AUDIT_SECTIONS) {
-    const checkedCategories = [];
-    for (const cat of sec.categories) {
-      const sectionFindings = [];
-      for (const f of cat.findings) {
+  // Mirror AUDIT_SECTIONS in full and decorate each finding with its
+  // auditor-assigned status ("x" / "pass" / "none") and note. The
+  // report iterates this whole structure so unevaluated rows still
+  // appear with empty Found cells.
+  const allSections = AUDIT_SECTIONS.map((sec) => ({
+    id: sec.id,
+    title: sec.title,
+    categories: sec.categories.map((cat) => ({
+      id: cat.id,
+      title: cat.title,
+      findings: cat.findings.map((f) => {
         const fieldId = `${sec.id}_${f.id}`;
-        if (fd.get(`finding_${fieldId}`) === "true") {
-          sectionFindings.push({
-            ...f,
-            note: (fd.get(`note_${fieldId}`) || "").toString().trim()
-          });
-        }
-      }
-      if (sectionFindings.length) {
-        checkedCategories.push({ id: cat.id, title: cat.title, findings: sectionFindings });
-      }
-    }
-    if (checkedCategories.length) {
-      checkedSections.push({ id: sec.id, title: sec.title, categories: checkedCategories });
-    }
-  }
+        const isX = fd.get(`finding_${fieldId}`) === "true";
+        const isPass = fd.get(`pass_${fieldId}`) === "true";
+        return {
+          ...f,
+          status: isX ? "x" : (isPass ? "pass" : "none"),
+          note: (fd.get(`note_${fieldId}`) || "").toString().trim()
+        };
+      })
+    }))
+  }));
 
   const cmpVal = fd.get("current_cmp") || "";
   const cmpOther = (fd.get("current_cmp_other") || "").toString().trim();
@@ -790,12 +832,12 @@ function collectFormData() {
     recommendation: (fd.get("recommendation") || "").toString().trim()
   };
 
-  return { meta, checkedSections, formData: fd };
+  return { meta, allSections, formData: fd };
 }
 
 /* ---------- Netlify submit ---------- */
 
-async function submitToNetlify(formData, meta, checkedSections) {
+async function submitToNetlify(formData, meta, allSections) {
   const body = new URLSearchParams();
   body.append("form-name", "cookie-audit");
   body.append("website_url", meta.website_url);
@@ -805,15 +847,19 @@ async function submitToNetlify(formData, meta, checkedSections) {
   body.append("recommendation", meta.recommendation);
   body.append("bot-field", formData.get("bot-field") || "");
 
-  const summary = checkedSections.flatMap((s) =>
+  // Only summarise findings the auditor actually marked (x or pass).
+  const summary = allSections.flatMap((s) =>
     s.categories.flatMap((c) =>
-      c.findings.map((f) => {
-        const desc = f.descriptor ? `${f.descriptor}: ` : "";
-        return `[${f.severity}] ${s.title} > ${c.title} > ${desc}${f.label}${f.note ? ` — note: ${f.note}` : ""}`;
-      })
+      c.findings
+        .filter((f) => f.status === "x" || f.status === "pass")
+        .map((f) => {
+          const tag = f.status === "x" ? "FAIL" : "PASS";
+          const desc = f.descriptor ? `${f.descriptor}: ` : "";
+          return `[${tag}] ${s.title} > ${c.title} > ${desc}${f.label}${f.note ? ` — note: ${f.note}` : ""}`;
+        })
     )
   ).join("\n");
-  body.append("findings_summary", summary || "No findings checked.");
+  body.append("findings_summary", summary || "No findings marked.");
 
   const res = await fetch("/", {
     method: "POST",
@@ -833,7 +879,30 @@ const REG_COLORS = {
   "PIPEDA": "117864"
 };
 
-function buildDocx(meta, checkedSections) {
+/* Auto-fill note text used when the SE marks a finding as Pass.
+   Keyed by finding id (same id can appear under multiple regions —
+   the pass-evidence wording is the same regardless of region). */
+const PASS_NOTES = {
+  no_banner:                     "Banner visible",
+  button_asymmetry:              "Buttons have equal visual weight (same size, color, position)",
+  no_reject_first_layer:         "Reject All button present on first layer",
+  do_not_sell_missing:           "\"Do Not Sell or Share My Personal Information\" link found in footer",
+  vendors_not_named:             "All firing vendors named in privacy policy",
+  gpc_not_detected:              "Site detects navigator.globalPrivacyControl",
+  gpc_ignored:                   "GPC honored as opt-out (consent signal updates automatically)",
+  pre_consent_tracking:          "No non-essential cookies, pixels, or session replay before consent",
+  post_reject_tracking:          "All tracking stops after Reject; consent signal reflects opt-out",
+  no_granular_toggles:           "Granular per-category toggles present",
+  pre_checked_toggles:           "All non-essential toggles off by default",
+  no_withdrawal_mechanism:       "Persistent way to withdraw consent (footer link or floating icon)",
+  essential_misclassified:       "Strictly Necessary contains only session/auth/CSRF/locale cookies",
+  banner_not_french_qc:          "Banner in French (or French markedly predominant)",
+  privacy_officer_missing:       "Privacy Officer named with contact info in privacy policy",
+  no_crossborder_disclosure:     "Cross-border data transfer disclosed (destination + safeguards)",
+  no_geo_detection:              "Different banners served per region (geo-targeting in place)"
+};
+
+function buildDocx(meta, allSections) {
   const d = window.docx;
   if (!d) throw new Error("docx library failed to load. Check your internet connection.");
 
@@ -876,56 +945,12 @@ function buildDocx(meta, checkedSections) {
   }
 
   /* ===========================================================
-     SECTION 1 — COVER PAGE
-     A single navy-filled table fills the whole page. Inside the
-     cell: TrustArc wordmark right-aligned at the top, then a
-     vertical spacer, then a centered white title.
-     =========================================================== */
-  const coverCell = new TableCell({
-    width: { size: 12240, type: WidthType.DXA },
-    shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-    margins: { top: 1200, bottom: 1200, left: 1000, right: 1000 },
-    children: [
-      // TrustArc wordmark right-aligned at top
-      new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 0, after: 0 },
-        children: [run("TrustArc", { size: 44, bold: true, color: HDR_TEXT })]
-      }),
-      // Vertical filler — pushes the title down toward the middle
-      new Paragraph({ spacing: { before: 5000, after: 0 }, children: [run(" ", { size: 4, color: HDR_TEXT })] }),
-      // Centered title
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 0, after: 0 },
-        children: [run("Cookie Consent", { size: 96, bold: true, color: HDR_TEXT })]
-      }),
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 0, after: 0 },
-        children: [run("Report", { size: 96, bold: true, color: HDR_TEXT })]
-      })
-    ]
-  });
-
-  const coverTable = new Table({
-    width: { size: 12240, type: WidthType.DXA },
-    columnWidths: [12240],
-    borders: noBorder,
-    rows: [new TableRow({
-      cantSplit: true,
-      height: { value: 15840, rule: HeightRule.EXACT },
-      children: [coverCell]
-    })]
-  });
-
-  const coverChildren = [coverTable];
-
-  /* ===========================================================
-     SECTION 2 — BODY
+     SINGLE-SECTION BODY
      Thin navy strip across the top (single-row table standing in
      for the template's gradient header image), then the title,
-     metadata, region tables, recommendation, disclaimer.
+     metadata, region tables (all regions, all findings, with each
+     finding showing X / ✓ / blank in the Found column based on
+     auditor status), recommendation, disclaimer.
      =========================================================== */
   const bodyChildren = [];
 
@@ -1005,6 +1030,9 @@ function buildDocx(meta, checkedSections) {
     const reg2 = f.regulations[1] || null;
     const rowFill = isAlt ? ALT_BG : "FFFFFF";
 
+    let foundGlyph = " ", foundColor = BODY_TEXT;
+    if (f.status === "x")    { foundGlyph = "X"; foundColor = "C0392B"; }
+    if (f.status === "pass") { foundGlyph = "✓"; foundColor = "16A34A"; }
     const foundCell = new TableCell({
       width: { size: colW[0], type: WidthType.DXA },
       margins: cellMargins,
@@ -1012,7 +1040,7 @@ function buildDocx(meta, checkedSections) {
       verticalAlign: "center",
       children: [new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [run("X", { size: 28, bold: true, color: "C0392B" })]
+        children: [run(foundGlyph, { size: 28, bold: true, color: foundColor })]
       })]
     });
 
@@ -1094,13 +1122,8 @@ function buildDocx(meta, checkedSections) {
     });
   }
 
-  if (!checkedSections.length) {
-    bodyChildren.push(new Paragraph({
-      spacing: { before: 200, after: 200 },
-      children: [run("No issues identified during this audit.", { italics: true, color: GREY, size: 22 })]
-    }));
-  } else {
-    for (const sec of checkedSections) {
+  {
+    for (const sec of allSections) {
       // Region heading
       bodyChildren.push(new Paragraph({
         spacing: { before: 320, after: 120 },
@@ -1165,16 +1188,7 @@ function buildDocx(meta, checkedSections) {
         properties: {
           page: {
             size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
-          }
-        },
-        children: coverChildren
-      },
-      {
-        properties: {
-          page: {
-            size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 1440, right: 900, bottom: 1080, left: 900, header: 0, footer: 0, gutter: 0 }
+            margin: { top: 720, right: 900, bottom: 720, left: 900, header: 0, footer: 0, gutter: 0 }
           }
         },
         children: bodyChildren
@@ -1189,8 +1203,8 @@ function sanitizeForFilename(s) {
   return String(s || "").replace(/^https?:\/\//, "").replace(/[^a-zA-Z0-9.-]/g, "_").slice(0, 50);
 }
 
-async function generateAndDownload(meta, checkedSections) {
-  const doc = buildDocx(meta, checkedSections);
+async function generateAndDownload(meta, allSections) {
+  const doc = buildDocx(meta, allSections);
   const blob = await window.docx.Packer.toBlob(doc);
   const urlPart = sanitizeForFilename(meta.website_url) || "audit";
   const datePart = meta.audit_date || new Date().toISOString().slice(0, 10);
@@ -1203,7 +1217,7 @@ async function generateAndDownload(meta, checkedSections) {
 function showSuccess() {
   const box = document.getElementById("form-success");
   box.hidden = false;
-  box.textContent = "Audit logged and report downloaded. Share the .docx with your customer.";
+  box.textContent = "Audit logged and report downloaded.";
   box.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -1221,13 +1235,13 @@ function attachSubmit() {
     document.getElementById("form-success").hidden = true;
     document.getElementById("form-errors").hidden = true;
 
-    const { meta, checkedSections, formData } = collectFormData();
+    const { meta, allSections, formData } = collectFormData();
     btn.disabled = true;
     btn.textContent = "Generating…";
     try {
-      try { await submitToNetlify(formData, meta, checkedSections); }
+      try { await submitToNetlify(formData, meta, allSections); }
       catch (e) { console.warn("Netlify submit failed (continuing with download):", e); }
-      await generateAndDownload(meta, checkedSections);
+      await generateAndDownload(meta, allSections);
       showSuccess();
     } catch (err) {
       console.error(err);
