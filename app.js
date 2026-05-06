@@ -998,7 +998,6 @@ function buildDocx(meta, allSections) {
   }
   bodyChildren.push(metaLine("Website: ",                    meta.website_url));
   bodyChildren.push(metaLine("Date: ",                       meta.audit_date));
-  bodyChildren.push(metaLine("Auditor: ",                    meta.auditor_name));
   bodyChildren.push(metaLine("Current Cookie Consent Tech: ", meta.current_cmp));
 
   /* ---- Findings tables (one per region) ----
