@@ -686,7 +686,8 @@ function renderFindings() {
           <div class="finding-row">
             <div class="status-checks">
               <input type="checkbox" id="finding_${fieldId}" name="finding_${fieldId}" value="true" class="status-x" aria-label="Mark non-compliant: ${escapeHtml(f.descriptor || f.label)}" />
-              <input type="checkbox" id="pass_${fieldId}" name="pass_${fieldId}" value="true" class="status-pass" data-pass-note="${escapeHtml(passNote)}" aria-label="Mark compliant: ${escapeHtml(f.descriptor || f.label)}" />
+              <input type="checkbox" id="pass_${fieldId}" name="pass_${fieldId}" value="true" class="status-pass-input" data-pass-note="${escapeHtml(passNote)}" aria-label="Mark compliant: ${escapeHtml(f.descriptor || f.label)}" />
+              <label for="pass_${fieldId}" class="pass-button">Pass</label>
             </div>
             <div class="finding-body">
               <div class="finding-head">
@@ -730,10 +731,10 @@ function renderFindings() {
     });
   });
 
-  // Mutual exclusion + auto-note for the X / Pass checkbox pair.
+  // Mutual exclusion + auto-note for the X / Pass-button pair.
   container.querySelectorAll(".status-x").forEach((xBox) => {
     const fieldId = xBox.id.replace(/^finding_/, "");
-    const passBox = container.querySelector(`#pass_${fieldId}`);
+    const passBox = container.querySelector(`#pass_${fieldId}`); // hidden checkbox driven by the pass-button label
     const noteInput = container.querySelector(`[name="note_${fieldId}"]`);
 
     xBox.addEventListener("change", () => {
@@ -1030,9 +1031,9 @@ function buildDocx(meta, allSections) {
     const reg2 = f.regulations[1] || null;
     const rowFill = isAlt ? ALT_BG : "FFFFFF";
 
+    // Found column: red X for non-compliant; blank for Pass or unevaluated.
     let foundGlyph = " ", foundColor = BODY_TEXT;
-    if (f.status === "x")    { foundGlyph = "X"; foundColor = "C0392B"; }
-    if (f.status === "pass") { foundGlyph = "✓"; foundColor = "16A34A"; }
+    if (f.status === "x") { foundGlyph = "X"; foundColor = "C0392B"; }
     const foundCell = new TableCell({
       width: { size: colW[0], type: WidthType.DXA },
       margins: cellMargins,
