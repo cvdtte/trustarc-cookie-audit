@@ -362,20 +362,31 @@ main {
   letter-spacing: -0.005em;
 }
 
+/* Severity badges. Using outline-only style + a flag/tag silhouette
+   so they read as labels, not interactive controls — keeps them
+   visually distinct from the solid Fail / Pass pill buttons. */
 .pill {
   display: inline-block;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  padding: 3px 8px;
-  border-radius: 12px;
+  letter-spacing: 0.08em;
+  padding: 1px 7px 1px 9px;
+  border-radius: 2px;
   text-transform: uppercase;
-  color: #fff;
   white-space: nowrap;
+  background: #fff;
 }
 
-.pill.required { background: var(--required); }
-.pill.best { background: var(--best); }
+.pill.required {
+  color: var(--required);
+  border: 1px solid var(--required);
+  border-left: 3px solid var(--required);
+}
+.pill.best {
+  color: var(--best);
+  border: 1px solid var(--best);
+  border-left: 3px solid var(--best);
+}
 
 .regs { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .reg-tag {
@@ -499,9 +510,10 @@ main {
   bottom: 16px;
   margin-top: 32px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   z-index: 10;
 }
 
@@ -522,6 +534,22 @@ main {
 .primary:hover { background: var(--cta-dark); }
 .primary:active { transform: translateY(1px); }
 .primary:disabled { background: #999; cursor: progress; box-shadow: none; }
+
+.secondary {
+  background: #fff;
+  color: var(--brand);
+  border: 2px solid var(--brand);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+.secondary:hover { background: var(--brand); color: #fff; }
+.secondary:active { transform: translateY(1px); }
+.secondary:disabled { color: #999; border-color: #999; cursor: progress; }
 
 .submit-note {
   font-size: 12px;
@@ -559,6 +587,6 @@ main {
   .display-title { font-size: 38px; }
   .section-band { font-size: 17px; }
   main { padding-bottom: 200px; }
-  .submit-bar { align-items: stretch; }
-  .primary { width: 100%; }
+  .submit-bar { flex-direction: column; align-items: stretch; }
+  .primary, .secondary { width: 100%; }
 }

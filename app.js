@@ -4,7 +4,7 @@ const AUDIT_SECTIONS = [
   {
     id: "california",
     title: "United States — California Check (CCPA + CIPA)",
-    subtitle: "VPN to California. Tick any box that applies — checked = non-compliant. CCPA = opt-out + GPC. CIPA = pre-consent tracking risks wiretap claims.",
+    subtitle: "VPN to California. Click Pass or Fail for each row. CCPA = opt-out + GPC. CIPA = pre-consent tracking risks wiretap claims.",
     categories: [
       {
         id: "visual",
@@ -192,7 +192,7 @@ const AUDIT_SECTIONS = [
   {
     id: "eu",
     title: "Europe — GDPR Check",
-    subtitle: "VPN to EU (Paris/Frankfurt/Dublin). Tick any box that applies — checked = non-compliant. GDPR is opt-in — nothing tracks before explicit consent.",
+    subtitle: "VPN to EU (Paris/Frankfurt/Dublin). Click Pass or Fail for each row. GDPR is opt-in — nothing tracks before explicit consent.",
     categories: [
       {
         id: "visual",
@@ -411,7 +411,7 @@ const AUDIT_SECTIONS = [
   {
     id: "canada",
     title: "Canada — Quebec Law 25 + PIPEDA Check",
-    subtitle: "VPN to Montreal for Quebec (opt-in + French). Toronto for rest-of-Canada PIPEDA. Tick any box that applies — checked = non-compliant.",
+    subtitle: "VPN to Montreal for Quebec (opt-in + French). Toronto for rest-of-Canada PIPEDA. Click Pass or Fail for each row.",
     categories: [
       {
         id: "visual",
@@ -1213,6 +1213,281 @@ async function generateAndDownload(meta, allSections) {
   window.saveAs(blob, fname);
 }
 
+/* ---------- Slide deck generation (PPTX) ----------
+   A 2-slide pitch deck the SE can hand off after the audit.
+   Slide 1 — top non-compliant findings + a headline stat.
+   Slide 2 — TrustArc capability mapping per failed finding,
+             plus a Technical Account Manager call-out.
+   Visual style follows the user-supplied template (TrustArc Board
+   Template): TrustArc navy + pink accents, Source Sans Pro,
+   pink radial-gradient blob accent. Portrait 7.5"×10". */
+
+const TRUSTARC_SOLUTIONS = {
+  no_banner:                 "Auto-deployed CMP with region-aware banners",
+  button_asymmetry:          "Pre-built compliant banner templates with symmetric Accept/Reject",
+  no_reject_first_layer:     "First-layer Reject button enforced by default",
+  do_not_sell_missing:       "Auto-injected DNSMPI link with the exact required wording",
+  vendors_not_named:         "Live vendor inventory with IAB TCF / GPP integration",
+  gpc_not_detected:          "GPC Auto-Honor — opt-out signals processed automatically",
+  gpc_ignored:               "End-to-end GPC enforcement that propagates across every tag",
+  pre_consent_tracking:      "Tag manager auto-blocks cookies, pixels, and session replay until consent",
+  post_reject_tracking:      "Real-time consent enforcement clears tags and cookies on Reject",
+  no_granular_toggles:       "Granular per-purpose preference center out of the box",
+  pre_checked_toggles:       "Opt-in defaults configured to GDPR / Law 25 standards",
+  no_withdrawal_mechanism:   "Always-on floating consent icon for one-click withdrawal",
+  essential_misclassified:   "Cookie scanner with auto-categorisation and audit logs",
+  banner_not_french_qc:      "Multilingual banners (FR/EN) with geo-detection for Quebec",
+  privacy_officer_missing:   "Privacy Officer console + DPO directory built into the platform",
+  no_crossborder_disclosure: "Privacy Impact Assessment workflow for cross-border transfers",
+  no_geo_detection:          "Geo-targeted banner rendering by IP / region"
+};
+
+function flattenFails(allSections) {
+  const out = [];
+  for (const s of allSections) {
+    for (const c of s.categories) {
+      for (const f of c.findings) {
+        if (f.status === "x") out.push({ ...f, sectionTitle: s.title });
+      }
+    }
+  }
+  return out;
+}
+
+function uniqueByDescriptor(fails) {
+  // Same finding (same id / descriptor) can appear under multiple
+  // regions. For the deck we want the union of unique gaps.
+  const seen = new Set();
+  const out = [];
+  for (const f of fails) {
+    if (seen.has(f.id)) continue;
+    seen.add(f.id);
+    out.push(f);
+  }
+  return out;
+}
+
+function regionsFlagged(allSections) {
+  const out = [];
+  for (const s of allSections) {
+    const has = s.categories.some((c) => c.findings.some((f) => f.status === "x"));
+    if (has) {
+      // Short label
+      if (s.id === "california") out.push("California (CCPA / CIPA)");
+      else if (s.id === "eu") out.push("EU (GDPR)");
+      else if (s.id === "canada") out.push("Canada (Law 25)");
+    }
+  }
+  return out;
+}
+
+function buildPptx(meta, allSections) {
+  if (!window.PptxGenJS) throw new Error("pptxgenjs failed to load. Check your internet connection.");
+  const pres = new window.PptxGenJS();
+
+  // Match the user-supplied template: 7.5" × 10" portrait
+  pres.defineLayout({ name: "TA_PORTRAIT", width: 7.5, height: 10 });
+  pres.layout = "TA_PORTRAIT";
+  pres.title = "Cookie Consent — TrustArc Recommendation";
+  pres.company = "TrustArc";
+
+  const NAVY = "000579";
+  const PINK = "E11A77";
+  const BLUE = "3699F1";
+  const TEXT = "0A0A23";
+  const MUTED = "555570";
+  const SOFT = "F4F6FA";
+
+  const fails = flattenFails(allSections);
+  const uniqueFails = uniqueByDescriptor(fails);
+  const flagged = regionsFlagged(allSections);
+  const totalFails = fails.length;
+  const customer = meta.website_url ? meta.website_url.replace(/^https?:\/\//, "").replace(/\/$/, "") : "the customer site";
+  const auditDate = meta.audit_date || new Date().toISOString().slice(0, 10);
+
+  /* ---- Helpers ---- */
+  function blobAccent(slide) {
+    // Pink radial gradient blob in the upper-right corner — recreated
+    // as a soft-edged ellipse since we're not embedding the template image.
+    slide.addShape(pres.ShapeType.ellipse, {
+      x: 4.6, y: -1.4, w: 4.6, h: 4.6,
+      fill: { type: "solid", color: PINK, transparency: 80 },
+      line: { type: "none" }
+    });
+  }
+
+  function trustarcMark(slide, x, y, w) {
+    // Two-tone wordmark (navy "TrustA" + blue "rc")
+    slide.addText([
+      { text: "TrustA", options: { bold: true, color: NAVY, fontFace: "Source Sans Pro", fontSize: 18 } },
+      { text: "rc",     options: { bold: true, color: BLUE, fontFace: "Source Sans Pro", fontSize: 18 } }
+    ], { x, y, w, h: 0.32, valign: "middle", align: "right" });
+  }
+
+  function eyebrow(slide, x, y, w, text, color) {
+    slide.addText(text, {
+      x, y, w, h: 0.22,
+      fontFace: "Source Sans Pro", fontSize: 9, bold: true,
+      color: color || PINK, charSpacing: 4, valign: "middle"
+    });
+  }
+
+  /* =========================================================
+     SLIDE 1 — Findings snapshot
+     ========================================================= */
+  const s1 = pres.addSlide();
+  s1.background = { color: "FFFFFF" };
+  blobAccent(s1);
+  trustarcMark(s1, 5.8, 0.3, 1.5);
+
+  eyebrow(s1, 0.4, 0.35, 4.5, "TRUSTARC COOKIE CONSENT AUDIT", PINK);
+
+  // Title — two-tone navy + pink, like the template
+  s1.addText([
+    { text: "Cookie Consent ",  options: { color: NAVY, bold: true, fontFace: "Source Sans Pro" } },
+    { text: "Audit",            options: { color: PINK, bold: true, fontFace: "Source Sans Pro" } }
+  ], { x: 0.4, y: 0.7, w: 6.7, h: 1.6, fontSize: 44, valign: "top" });
+
+  // Subtitle — customer + date + flagged regions
+  s1.addText(`${customer}  •  ${auditDate}`, {
+    x: 0.4, y: 2.3, w: 6.7, h: 0.4,
+    fontFace: "Source Sans Pro", fontSize: 14, color: MUTED, valign: "top"
+  });
+
+  // Headline stat
+  s1.addShape(pres.ShapeType.rect, {
+    x: 0.4, y: 2.95, w: 6.7, h: 1.2,
+    fill: { color: NAVY }, line: { type: "none" }
+  });
+  s1.addText([
+    { text: `${totalFails}`, options: { fontSize: 60, bold: true, color: "FFFFFF", fontFace: "Source Sans Pro" } },
+    { text: `  non-compliant findings observed`, options: { fontSize: 18, color: "FFFFFF", fontFace: "Source Sans Pro" } }
+  ], { x: 0.7, y: 3.1, w: 6.1, h: 0.9, valign: "middle" });
+
+  if (flagged.length) {
+    s1.addText(`Across: ${flagged.join(" • ")}`, {
+      x: 0.4, y: 4.25, w: 6.7, h: 0.32,
+      fontFace: "Source Sans Pro", fontSize: 11, italic: true, color: MUTED
+    });
+  }
+
+  // Top findings list
+  s1.addText("Key issues identified", {
+    x: 0.4, y: 4.75, w: 6.7, h: 0.4,
+    fontFace: "Source Sans Pro", fontSize: 16, bold: true, color: NAVY
+  });
+
+  const top = uniqueFails.slice(0, 6);
+  if (top.length) {
+    const bullets = top.map((f) => ({
+      text: (f.descriptor ? `${f.descriptor} — ` : "") + f.label,
+      options: { bullet: { code: "25CF" }, color: TEXT, fontSize: 12, fontFace: "Source Sans Pro", paraSpaceAfter: 4 }
+    }));
+    s1.addText(bullets, {
+      x: 0.5, y: 5.2, w: 6.6, h: 3.5, valign: "top"
+    });
+  } else {
+    s1.addText("No issues marked. Run an audit to populate this slide.", {
+      x: 0.5, y: 5.2, w: 6.6, h: 0.5,
+      fontFace: "Source Sans Pro", fontSize: 13, italic: true, color: MUTED
+    });
+  }
+
+  // Footer disclaimer
+  s1.addText("Informational summary. Not legal advice.", {
+    x: 0.4, y: 9.5, w: 6.7, h: 0.3,
+    fontFace: "Source Sans Pro", fontSize: 9, color: MUTED, italic: true
+  });
+
+  /* =========================================================
+     SLIDE 2 — Why TrustArc / capability mapping
+     ========================================================= */
+  const s2 = pres.addSlide();
+  s2.background = { color: "FFFFFF" };
+  blobAccent(s2);
+  trustarcMark(s2, 5.8, 0.3, 1.5);
+
+  eyebrow(s2, 0.4, 0.35, 4.5, "RECOMMENDATION", PINK);
+
+  s2.addText([
+    { text: "Why ",        options: { color: NAVY, bold: true, fontFace: "Source Sans Pro" } },
+    { text: "TrustArc",    options: { color: PINK, bold: true, fontFace: "Source Sans Pro" } }
+  ], { x: 0.4, y: 0.7, w: 6.7, h: 1.0, fontSize: 44, valign: "top" });
+
+  s2.addText("Closing the gaps observed in your audit", {
+    x: 0.4, y: 1.7, w: 6.7, h: 0.4,
+    fontFace: "Source Sans Pro", fontSize: 14, color: MUTED
+  });
+
+  // Capability mapping rows — Issue → TrustArc capability
+  const mapped = uniqueFails
+    .map((f) => ({ issue: f.descriptor || f.label, fix: TRUSTARC_SOLUTIONS[f.id] }))
+    .filter((row) => row.fix)
+    .slice(0, 6);
+
+  let yCursor = 2.3;
+  if (mapped.length) {
+    // Header strip
+    s2.addShape(pres.ShapeType.rect, {
+      x: 0.4, y: yCursor, w: 6.7, h: 0.32, fill: { color: SOFT }, line: { type: "none" }
+    });
+    s2.addText("YOUR GAP", {
+      x: 0.5, y: yCursor, w: 2.6, h: 0.32,
+      fontFace: "Source Sans Pro", fontSize: 9, bold: true, color: NAVY, charSpacing: 4, valign: "middle"
+    });
+    s2.addText("TRUSTARC CAPABILITY", {
+      x: 3.3, y: yCursor, w: 3.7, h: 0.32,
+      fontFace: "Source Sans Pro", fontSize: 9, bold: true, color: NAVY, charSpacing: 4, valign: "middle"
+    });
+    yCursor += 0.4;
+
+    for (const row of mapped) {
+      s2.addText(row.issue, {
+        x: 0.5, y: yCursor, w: 2.6, h: 0.6,
+        fontFace: "Source Sans Pro", fontSize: 11, bold: true, color: TEXT, valign: "top"
+      });
+      s2.addText("→  " + row.fix, {
+        x: 3.3, y: yCursor, w: 3.7, h: 0.6,
+        fontFace: "Source Sans Pro", fontSize: 11, color: TEXT, valign: "top"
+      });
+      yCursor += 0.65;
+    }
+  } else {
+    s2.addText("No gaps were marked failing in the audit. TrustArc still provides a continuous-monitoring CMP, GPC enforcement, and a Technical Account Manager to keep this site compliant as regulations evolve.",
+      { x: 0.4, y: yCursor, w: 6.7, h: 1.5, fontFace: "Source Sans Pro", fontSize: 13, color: TEXT, valign: "top" });
+    yCursor += 1.6;
+  }
+
+  // Technical Account Manager call-out — pink-bordered card
+  const camY = Math.max(yCursor + 0.3, 7.6);
+  s2.addShape(pres.ShapeType.rect, {
+    x: 0.4, y: camY, w: 6.7, h: 1.55,
+    fill: { color: "FFFFFF" },
+    line: { color: PINK, width: 2 }
+  });
+  s2.addText("DEDICATED TECHNICAL ACCOUNT MANAGER", {
+    x: 0.6, y: camY + 0.18, w: 6.4, h: 0.3,
+    fontFace: "Source Sans Pro", fontSize: 10, bold: true, color: PINK, charSpacing: 4
+  });
+  s2.addText("Every TrustArc customer is paired with a dedicated TAM who owns implementation, monitors live consent telemetry, and works with your legal and engineering teams to keep the deployment audit-ready as CCPA, GDPR, and Law 25 evolve.",
+    { x: 0.6, y: camY + 0.5, w: 6.4, h: 1.0, fontFace: "Source Sans Pro", fontSize: 11, color: TEXT, valign: "top" });
+
+  s2.addText("Informational summary. Not legal advice.", {
+    x: 0.4, y: 9.5, w: 6.7, h: 0.3,
+    fontFace: "Source Sans Pro", fontSize: 9, color: MUTED, italic: true
+  });
+
+  return pres;
+}
+
+async function generateDeck(meta, allSections) {
+  const pres = buildPptx(meta, allSections);
+  const urlPart = sanitizeForFilename(meta.website_url) || "audit";
+  const datePart = meta.audit_date || new Date().toISOString().slice(0, 10);
+  const fname = `TrustArc_Recommendation_${urlPart}_${datePart}.pptx`;
+  await pres.writeFile({ fileName: fname });
+}
+
 /* ---------- Submit handler ---------- */
 
 function showSuccess() {
@@ -1254,6 +1529,32 @@ function attachSubmit() {
   });
 }
 
+function attachDeck() {
+  const btn = document.getElementById("deck-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    document.getElementById("form-success").hidden = true;
+    document.getElementById("form-errors").hidden = true;
+
+    const { meta, allSections } = collectFormData();
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = "Building deck…";
+    try {
+      await generateDeck(meta, allSections);
+      const ok = document.getElementById("form-success");
+      ok.hidden = false;
+      ok.textContent = "Slide deck downloaded.";
+    } catch (err) {
+      console.error(err);
+      showError(`Slide deck generation failed: ${err.message}.`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  });
+}
+
 /* ---------- Boot ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1262,4 +1563,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initCmpOther();
   initRecCount();
   attachSubmit();
+  attachDeck();
 });
