@@ -1458,19 +1458,52 @@ function buildPptx(meta, allSections) {
     yCursor += 1.6;
   }
 
-  // Technical Account Manager call-out — pink-bordered card
-  const camY = Math.max(yCursor + 0.3, 7.6);
+  // Tier comparison cards — side-by-side.
+  // Left  (blue):  Cookie Consent Manager Professional — self-serve.
+  // Right (pink):  Cookie Consent Manager Advanced     — includes a dedicated Technical Account Manager.
+  const tiersY = Math.max(yCursor + 0.25, 7.55);
+  const cardH  = 1.7;
+  const cardW  = 3.25;
+  const proX   = 0.4;
+  const advX   = 0.4 + cardW + 0.2; // 3.85
+
+  // ---- Professional (blue) ----
   s2.addShape(pres.ShapeType.rect, {
-    x: 0.4, y: camY, w: 6.7, h: 1.55,
-    fill: { color: "FFFFFF" },
-    line: { color: PINK, width: 2 }
+    x: proX, y: tiersY, w: cardW, h: cardH,
+    fill: { color: "FFFFFF" }, line: { color: BLUE, width: 2 }
   });
-  s2.addText("DEDICATED TECHNICAL ACCOUNT MANAGER", {
-    x: 0.6, y: camY + 0.18, w: 6.4, h: 0.3,
-    fontFace: "Source Sans Pro", fontSize: 10, bold: true, color: PINK, charSpacing: 4
+  s2.addText("COOKIE CONSENT MANAGER", {
+    x: proX + 0.18, y: tiersY + 0.16, w: cardW - 0.36, h: 0.22,
+    fontFace: "Source Sans Pro", fontSize: 8.5, bold: true, color: BLUE, charSpacing: 4
   });
-  s2.addText("Every TrustArc customer is paired with a dedicated TAM who owns implementation, monitors live consent telemetry, and works with your legal and engineering teams to keep the deployment audit-ready as CCPA, GDPR, and Law 25 evolve.",
-    { x: 0.6, y: camY + 0.5, w: 6.4, h: 1.0, fontFace: "Source Sans Pro", fontSize: 11, color: TEXT, valign: "top" });
+  s2.addText("Professional", {
+    x: proX + 0.18, y: tiersY + 0.36, w: cardW - 0.36, h: 0.36,
+    fontFace: "Source Sans Pro", fontSize: 18, bold: true, color: NAVY
+  });
+  s2.addText(
+    "Self-serve deployment with pre-built compliant banner templates, granular preference center, GPC support, automatic cookie scanning, and a knowledge-base + community support model.",
+    { x: proX + 0.18, y: tiersY + 0.76, w: cardW - 0.36, h: cardH - 0.9,
+      fontFace: "Source Sans Pro", fontSize: 10, color: TEXT, valign: "top" }
+  );
+
+  // ---- Advanced (pink) ----
+  s2.addShape(pres.ShapeType.rect, {
+    x: advX, y: tiersY, w: cardW, h: cardH,
+    fill: { color: "FFFFFF" }, line: { color: PINK, width: 2 }
+  });
+  s2.addText("COOKIE CONSENT MANAGER", {
+    x: advX + 0.18, y: tiersY + 0.16, w: cardW - 0.36, h: 0.22,
+    fontFace: "Source Sans Pro", fontSize: 8.5, bold: true, color: PINK, charSpacing: 4
+  });
+  s2.addText("Advanced", {
+    x: advX + 0.18, y: tiersY + 0.36, w: cardW - 0.36, h: 0.36,
+    fontFace: "Source Sans Pro", fontSize: 18, bold: true, color: NAVY
+  });
+  s2.addText(
+    "Everything in Professional, plus a dedicated Technical Account Manager who owns implementation, monitors live consent telemetry, and partners with your legal and engineering teams to keep the deployment audit-ready as CCPA, GDPR, and Law 25 evolve.",
+    { x: advX + 0.18, y: tiersY + 0.76, w: cardW - 0.36, h: cardH - 0.9,
+      fontFace: "Source Sans Pro", fontSize: 10, color: TEXT, valign: "top" }
+  );
 
   s2.addText("Informational summary. Not legal advice.", {
     x: 0.4, y: 9.5, w: 6.7, h: 0.3,
