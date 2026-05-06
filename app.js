@@ -957,41 +957,42 @@ function buildDocx(meta, allSections) {
      auditor status), recommendation, disclaimer.
      =========================================================== */
   const bodyChildren = [];
+  const tightCell = { top: 30, bottom: 30, left: 80, right: 80 };
 
-  // Top navy strip with TrustArc wordmark
+  // Top navy strip with TrustArc wordmark — slimmed to 240 DXA tall
   bodyChildren.push(new Table({
-    width: { size: 10440, type: WidthType.DXA },
-    columnWidths: [10440],
+    width: { size: 10800, type: WidthType.DXA },
+    columnWidths: [10800],
     borders: noBorder,
     rows: [new TableRow({
       cantSplit: true,
-      height: { value: 360, rule: HeightRule.EXACT },
+      height: { value: 240, rule: HeightRule.EXACT },
       children: [new TableCell({
-        width: { size: 10440, type: WidthType.DXA },
+        width: { size: 10800, type: WidthType.DXA },
         shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-        margins: { top: 60, bottom: 60, left: 200, right: 200 },
+        margins: { top: 30, bottom: 30, left: 160, right: 160 },
         children: [new Paragraph({
           alignment: AlignmentType.RIGHT,
-          children: [run("TrustArc", { size: 22, bold: true, color: HDR_TEXT })]
+          children: [run("TrustArc", { size: 16, bold: true, color: HDR_TEXT })]
         })]
       })]
     })]
   }));
 
-  // Body title — "Cookie Consent Report*" centered in navy
+  // Body title — "Cookie Consent Report*"
   bodyChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 480, after: 240 },
-    children: [run("Cookie Consent Report*", { size: 56, bold: true, color: NAVY })]
+    spacing: { before: 200, after: 120 },
+    children: [run("Cookie Consent Report*", { size: 32, bold: true, color: NAVY })]
   }));
 
   // Metadata block — left aligned key/value pairs
   function metaLine(label, value) {
     return new Paragraph({
-      spacing: { before: 40, after: 40 },
+      spacing: { before: 20, after: 20 },
       children: [
-        run(label, { size: 22, bold: true, color: NAVY }),
-        run(dash(value), { size: 22 })
+        run(label, { size: 16, bold: true, color: NAVY }),
+        run(dash(value), { size: 16 })
       ]
     });
   }
@@ -1000,32 +1001,34 @@ function buildDocx(meta, allSections) {
   bodyChildren.push(metaLine("Auditor: ",                    meta.auditor_name));
   bodyChildren.push(metaLine("Current Cookie Consent Tech: ", meta.current_cmp));
 
-  // Spacer before findings
-  bodyChildren.push(new Paragraph({ spacing: { before: 240, after: 0 }, children: [run(" ", { size: 14 })] }));
-
-  /* ---- Findings tables (one per region) ---- */
-  // Column widths in DXA (Letter content area = 12240 - 2×900 margins ≈ 10440 DXA usable)
-  const colW = [700, 4500, 1100, 1100, 3000]; // Found | Behavior | Reg1 | Reg2 | Comments
+  /* ---- Findings tables (one per region) ----
+     California and EU always render (audited or not). Canada only
+     renders if at least one Canada finding is marked X or Pass —
+     keeps the report compact for US/EU audits that skip Canada. */
+  const colW = [560, 5100, 900, 900, 3340]; // Found | Behavior | Reg1 | Reg2 | Comments — totals 10800
   const tblW = colW.reduce((a, b) => a + b, 0);
 
-  function regCell(regName) {
-    if (!regName) {
-      return new TableCell({
-        width: { size: colW[2], type: WidthType.DXA },
-        margins: cellMargins,
-        children: [new Paragraph({ children: [run(" ", { size: 16 })] })]
-      });
-    }
+  function regCell(regName, width) {
+    if (!regName) return null;
     const fill = REG_COLORS[regName] || GREY;
     return new TableCell({
-      width: { size: colW[2], type: WidthType.DXA },
-      margins: { top: 60, bottom: 60, left: 60, right: 60 },
+      width: { size: width, type: WidthType.DXA },
+      margins: { top: 30, bottom: 30, left: 40, right: 40 },
       shading: { type: ShadingType.CLEAR, color: "auto", fill: fill },
       verticalAlign: "center",
       children: [new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [run(regName, { size: 18, bold: true, color: HDR_TEXT })]
+        children: [run(regName, { size: 12, bold: true, color: HDR_TEXT })]
       })]
+    });
+  }
+
+  function emptyRegCell(width, rowFill) {
+    return new TableCell({
+      width: { size: width, type: WidthType.DXA },
+      margins: tightCell,
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
+      children: [new Paragraph({ children: [run(" ", { size: 12 })] })]
     });
   }
 
@@ -1034,52 +1037,41 @@ function buildDocx(meta, allSections) {
     const reg2 = f.regulations[1] || null;
     const rowFill = isAlt ? ALT_BG : "FFFFFF";
 
-    // Found column: red X for non-compliant; blank for Pass or unevaluated.
     let foundGlyph = " ", foundColor = BODY_TEXT;
     if (f.status === "x") { foundGlyph = "X"; foundColor = "C0392B"; }
     const foundCell = new TableCell({
       width: { size: colW[0], type: WidthType.DXA },
-      margins: cellMargins,
+      margins: tightCell,
       shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
       verticalAlign: "center",
       children: [new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [run(foundGlyph, { size: 28, bold: true, color: foundColor })]
+        children: [run(foundGlyph, { size: 20, bold: true, color: foundColor })]
       })]
     });
 
     const labelRuns = [];
     if (f.descriptor) {
-      labelRuns.push(run(f.descriptor + ". ", { size: 20, bold: true, color: NAVY }));
+      labelRuns.push(run(f.descriptor + ". ", { size: 14, bold: true, color: NAVY }));
     }
-    labelRuns.push(run(f.label, { size: 20 }));
+    labelRuns.push(run(f.label, { size: 14 }));
 
     const behaviorCell = new TableCell({
       width: { size: colW[1], type: WidthType.DXA },
-      margins: cellMargins,
+      margins: tightCell,
       shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
       children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: labelRuns })]
     });
 
-    const r1 = reg1 ? regCell(reg1) : new TableCell({
-      width: { size: colW[2], type: WidthType.DXA },
-      margins: cellMargins,
-      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
-      children: [new Paragraph({ children: [run(" ", { size: 16 })] })]
-    });
-    const r2 = reg2 ? regCell(reg2) : new TableCell({
-      width: { size: colW[3], type: WidthType.DXA },
-      margins: cellMargins,
-      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
-      children: [new Paragraph({ children: [run(" ", { size: 16 })] })]
-    });
+    const r1 = reg1 ? regCell(reg1, colW[2]) : emptyRegCell(colW[2], rowFill);
+    const r2 = reg2 ? regCell(reg2, colW[3]) : emptyRegCell(colW[3], rowFill);
 
     const commentsCell = new TableCell({
       width: { size: colW[4], type: WidthType.DXA },
-      margins: cellMargins,
+      margins: tightCell,
       shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
       children: [new Paragraph({
-        children: [run(f.note || "", { size: 18, italics: !!f.note, color: GREY })]
+        children: [run(f.note || "", { size: 12, italics: !!f.note, color: GREY })]
       })]
     });
 
@@ -1093,9 +1085,9 @@ function buildDocx(meta, allSections) {
         width: { size: tblW, type: WidthType.DXA },
         columnSpan: 5,
         shading: { type: ShadingType.CLEAR, color: "auto", fill: BAND_BG },
-        margins: { top: 100, bottom: 100, left: 140, right: 140 },
+        margins: { top: 40, bottom: 40, left: 100, right: 100 },
         children: [new Paragraph({
-          children: [run(title, { size: 22, bold: true, color: NAVY })]
+          children: [run(title, { size: 14, bold: true, color: NAVY })]
         })]
       })]
     });
@@ -1107,11 +1099,11 @@ function buildDocx(meta, allSections) {
         width: { size: width, type: WidthType.DXA },
         columnSpan: span || 1,
         shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-        margins: { top: 100, bottom: 100, left: 120, right: 120 },
+        margins: { top: 40, bottom: 40, left: 80, right: 80 },
         verticalAlign: "center",
         children: [new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [run(text, { size: 20, bold: true, color: HDR_TEXT })]
+          children: [run(text, { size: 14, bold: true, color: HDR_TEXT })]
         })]
       });
     }
@@ -1126,57 +1118,63 @@ function buildDocx(meta, allSections) {
     });
   }
 
-  {
-    for (const sec of allSections) {
-      // Region heading
-      bodyChildren.push(new Paragraph({
-        spacing: { before: 320, after: 120 },
-        children: [run(sec.title, { size: 28, bold: true, color: NAVY })]
-      }));
+  // Filter: California and EU always show. Canada only if at least
+  // one Canada finding is Fail or Pass.
+  const sectionsToShow = allSections.filter((sec) => {
+    if (sec.id !== "canada") return true;
+    return sec.categories.some((cat) =>
+      cat.findings.some((f) => f.status === "x" || f.status === "pass")
+    );
+  });
 
-      const rows = [buildHeaderRow()];
-      for (const cat of sec.categories) {
-        rows.push(buildBandRow(cat.title));
-        let alt = false;
-        for (const f of cat.findings) {
-          rows.push(buildFindingRow(f, alt));
-          alt = !alt;
-        }
+  for (const sec of sectionsToShow) {
+    bodyChildren.push(new Paragraph({
+      spacing: { before: 200, after: 60 },
+      children: [run(sec.title, { size: 18, bold: true, color: NAVY })]
+    }));
+
+    const rows = [buildHeaderRow()];
+    for (const cat of sec.categories) {
+      rows.push(buildBandRow(cat.title));
+      let alt = false;
+      for (const f of cat.findings) {
+        rows.push(buildFindingRow(f, alt));
+        alt = !alt;
       }
-
-      bodyChildren.push(new Table({
-        width: { size: tblW, type: WidthType.DXA },
-        columnWidths: colW,
-        borders: {
-          top:              { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-          bottom:           { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-          left:             { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-          right:            { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-          insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
-          insideVertical:   { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" }
-        },
-        rows
-      }));
     }
+
+    bodyChildren.push(new Table({
+      width: { size: tblW, type: WidthType.DXA },
+      columnWidths: colW,
+      borders: {
+        top:              { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+        bottom:           { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+        left:             { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+        right:            { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+        insideVertical:   { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" }
+      },
+      rows
+    }));
   }
 
   /* ---- Recommendation ---- */
   bodyChildren.push(new Paragraph({
-    spacing: { before: 360, after: 120 },
-    children: [run("Recommendation:", { size: 28, bold: true, color: NAVY })]
+    spacing: { before: 200, after: 60 },
+    children: [run("Recommendation:", { size: 18, bold: true, color: NAVY })]
   }));
   bodyChildren.push(new Paragraph({
     alignment: AlignmentType.JUSTIFIED,
-    spacing: { before: 40, after: 240 },
-    children: [run(meta.recommendation || "—", { size: 22 })]
+    spacing: { before: 20, after: 100 },
+    children: [run(meta.recommendation || "—", { size: 14 })]
   }));
 
   /* ---- Disclaimer ---- */
   bodyChildren.push(new Paragraph({
-    spacing: { before: 240, after: 40 },
+    spacing: { before: 100, after: 0 },
     children: [run(
       "*This report is informational and is not intended to serve as legal advice. Please carefully consult your privacy and/or legal teams prior to making any legal decisions.",
-      { size: 16, italics: true, color: GREY }
+      { size: 12, italics: true, color: GREY }
     )]
   }));
 
@@ -1192,7 +1190,7 @@ function buildDocx(meta, allSections) {
         properties: {
           page: {
             size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
-            margin: { top: 720, right: 900, bottom: 720, left: 900, header: 0, footer: 0, gutter: 0 }
+            margin: { top: 540, right: 720, bottom: 540, left: 720, header: 0, footer: 0, gutter: 0 }
           }
         },
         children: bodyChildren
