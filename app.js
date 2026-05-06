@@ -825,15 +825,6 @@ async function submitToNetlify(formData, meta, checkedSections) {
 
 /* ---------- DOCX generation ---------- */
 
-/* ---- Image bytes (decoded from base64) ---- */
-function _b64ToBytes(b64) {
-  if (!b64) return null;
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
 const REG_COLORS = {
   "GDPR":   "2E6DA4",
   "CCPA":   "7B2D8B",
@@ -847,11 +838,8 @@ function buildDocx(meta, checkedSections) {
   if (!d) throw new Error("docx library failed to load. Check your internet connection.");
 
   const {
-    Document, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
-    WidthType, AlignmentType, BorderStyle, ShadingType, PageOrientation, HeightRule,
-    HorizontalPositionRelativeFrom, HorizontalPositionAlign,
-    VerticalPositionRelativeFrom, VerticalPositionAlign,
-    TextWrappingType
+    Document, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, AlignmentType, BorderStyle, ShadingType, PageOrientation, HeightRule
   } = d;
 
   /* TrustArc template palette (sampled from Cookie_Consent_Report_Copy.docx) */
@@ -867,6 +855,15 @@ function buildDocx(meta, checkedSections) {
 
   const cellMargins = { top: 80, bottom: 80, left: 120, right: 120 };
 
+  const noBorder = {
+    top:              { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    bottom:           { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    left:             { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    right:            { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    insideVertical:   { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }
+  };
+
   function run(text, opts = {}) {
     return new TextRun({
       text: text,
@@ -878,101 +875,84 @@ function buildDocx(meta, checkedSections) {
     });
   }
 
-  function para(text, opts = {}) {
-    return new Paragraph({
-      alignment: opts.alignment,
-      spacing: opts.spacing || { before: 0, after: 40 },
-      children: [run(text, opts)]
-    });
-  }
-
   /* ===========================================================
      SECTION 1 — COVER PAGE
-     Full-bleed navy background image with TrustArc logo top-right,
-     and the report title centered.
+     A single navy-filled table fills the whole page. Inside the
+     cell: TrustArc wordmark right-aligned at the top, then a
+     vertical spacer, then a centered white title.
      =========================================================== */
-  const coverBytes = _b64ToBytes(window.AUDIT_IMAGES && window.AUDIT_IMAGES.cover);
-  const coverChildren = [];
+  const coverCell = new TableCell({
+    width: { size: 12240, type: WidthType.DXA },
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
+    margins: { top: 1200, bottom: 1200, left: 1000, right: 1000 },
+    children: [
+      // TrustArc wordmark right-aligned at top
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 0, after: 0 },
+        children: [run("TrustArc", { size: 44, bold: true, color: HDR_TEXT })]
+      }),
+      // Vertical filler — pushes the title down toward the middle
+      new Paragraph({ spacing: { before: 5000, after: 0 }, children: [run(" ", { size: 4, color: HDR_TEXT })] }),
+      // Centered title
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 0 },
+        children: [run("Cookie Consent", { size: 96, bold: true, color: HDR_TEXT })]
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 0 },
+        children: [run("Report", { size: 96, bold: true, color: HDR_TEXT })]
+      })
+    ]
+  });
 
-  if (coverBytes) {
-    coverChildren.push(new Paragraph({
-      children: [new ImageRun({
-        data: coverBytes,
-        transformation: { width: 816, height: 1056 },
-        floating: {
-          horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
-          verticalPosition:   { relative: VerticalPositionRelativeFrom.PAGE,   offset: 0 },
-          behindDocument: true,
-          zIndex: -1
-        }
-      })]
-    }));
-  } else {
-    // Fallback: a tall navy-filled single-cell table standing in for the image
-    coverChildren.push(new Table({
-      width: { size: 12240, type: WidthType.DXA },
-      borders: {
-        top:    { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        left:   { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        right:  { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }
-      },
-      rows: [new TableRow({
-        height: { value: 15840, rule: HeightRule.EXACT },
-        children: [new TableCell({
-          width: { size: 12240, type: WidthType.DXA },
-          shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
-          children: [new Paragraph({ children: [run(" ")] })]
-        })]
-      })]
-    }));
-  }
+  const coverTable = new Table({
+    width: { size: 12240, type: WidthType.DXA },
+    columnWidths: [12240],
+    borders: noBorder,
+    rows: [new TableRow({
+      cantSplit: true,
+      height: { value: 15840, rule: HeightRule.EXACT },
+      children: [coverCell]
+    })]
+  });
 
-  // Centered title overlay (drawn on top of the floating cover image)
-  coverChildren.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 6200, after: 0 },
-    children: [run("Cookie Consent", {
-      size: 96, bold: true, color: HDR_TEXT
-    })]
-  }));
-  coverChildren.push(new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 0, after: 0 },
-    children: [run("Report", {
-      size: 96, bold: true, color: HDR_TEXT
-    })]
-  }));
+  const coverChildren = [coverTable];
 
   /* ===========================================================
      SECTION 2 — BODY
-     Header strip, title, metadata, region findings tables,
-     recommendation, disclaimer.
+     Thin navy strip across the top (single-row table standing in
+     for the template's gradient header image), then the title,
+     metadata, region tables, recommendation, disclaimer.
      =========================================================== */
   const bodyChildren = [];
 
-  // Header strip image floating at top of body pages
-  const stripBytes = _b64ToBytes(window.AUDIT_IMAGES && window.AUDIT_IMAGES.headerStrip);
-  if (stripBytes) {
-    bodyChildren.push(new Paragraph({
-      children: [new ImageRun({
-        data: stripBytes,
-        transformation: { width: 816, height: 100 },
-        floating: {
-          horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
-          verticalPosition:   { relative: VerticalPositionRelativeFrom.PAGE,   offset: 0 },
-          behindDocument: false,
-          zIndex: 0,
-          wrap: { type: TextWrappingType.NONE }
-        }
+  // Top navy strip with TrustArc wordmark
+  bodyChildren.push(new Table({
+    width: { size: 10440, type: WidthType.DXA },
+    columnWidths: [10440],
+    borders: noBorder,
+    rows: [new TableRow({
+      cantSplit: true,
+      height: { value: 360, rule: HeightRule.EXACT },
+      children: [new TableCell({
+        width: { size: 10440, type: WidthType.DXA },
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
+        margins: { top: 60, bottom: 60, left: 200, right: 200 },
+        children: [new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          children: [run("TrustArc", { size: 22, bold: true, color: HDR_TEXT })]
+        })]
       })]
-    }));
-  }
+    })]
+  }));
 
   // Body title — "Cookie Consent Report*" centered in navy
   bodyChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 600, after: 240 },
+    spacing: { before: 480, after: 240 },
     children: [run("Cookie Consent Report*", { size: 56, bold: true, color: NAVY })]
   }));
 
@@ -1032,7 +1012,7 @@ function buildDocx(meta, checkedSections) {
       verticalAlign: "center",
       children: [new Paragraph({
         alignment: AlignmentType.CENTER,
-        children: [run("☒", { size: 32, bold: true, color: "C0392B" })]
+        children: [run("X", { size: 28, bold: true, color: "C0392B" })]
       })]
     });
 
