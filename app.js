@@ -825,263 +825,381 @@ async function submitToNetlify(formData, meta, checkedSections) {
 
 /* ---------- DOCX generation ---------- */
 
+/* ---- Image bytes (decoded from base64) ---- */
+function _b64ToBytes(b64) {
+  if (!b64) return null;
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+const REG_COLORS = {
+  "GDPR":   "2E6DA4",
+  "CCPA":   "7B2D8B",
+  "CIPA":   "C0392B",
+  "Law 25": "D35400",
+  "PIPEDA": "117864"
+};
+
 function buildDocx(meta, checkedSections) {
   const d = window.docx;
+  if (!d) throw new Error("docx library failed to load. Check your internet connection.");
+
   const {
-    Document, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, AlignmentType, BorderStyle, ShadingType, PageOrientation
+    Document, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
+    WidthType, AlignmentType, BorderStyle, ShadingType, PageOrientation, HeightRule,
+    HorizontalPositionRelativeFrom, HorizontalPositionAlign,
+    VerticalPositionRelativeFrom, VerticalPositionAlign,
+    TextWrappingType
   } = d;
 
-  const BRAND = "000239";
-  const ACCENT = "3699F1";
-  const REQUIRED = "C00000";
-  const BEST = "7F7F7F";
-  const GREY = "595959";
-  const SOFT = "EEF2F4";
-
-  const noBorder = {
-    top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-    bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-    left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-    right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-    insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-    insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }
-  };
-
-  const cellMargins = { top: 60, bottom: 60, left: 100, right: 100 };
-
-  function p(text, opts = {}) {
-    return new Paragraph({
-      alignment: opts.alignment,
-      spacing: opts.spacing || { before: 0, after: 40 },
-      children: [
-        new TextRun({
-          text: text,
-          font: "Arial",
-          size: opts.size || 20,
-          bold: !!opts.bold,
-          italics: !!opts.italics,
-          color: opts.color
-        })
-      ]
-    });
-  }
-
-  function plainCell(text, opts = {}) {
-    return new TableCell({
-      width: opts.width,
-      margins: cellMargins,
-      shading: opts.fill ? { type: ShadingType.CLEAR, color: "auto", fill: opts.fill } : undefined,
-      children: [p(text, { size: opts.size || 18, bold: opts.bold, color: opts.color })]
-    });
-  }
-
-  function findingCell(f, width) {
-    const runs = [];
-    if (f.descriptor) {
-      runs.push(new TextRun({ text: `${f.descriptor}. `, font: "Arial", size: 18, bold: true, color: BRAND }));
-    }
-    runs.push(new TextRun({ text: f.label, font: "Arial", size: 18 }));
-    return new TableCell({
-      width: { size: width, type: WidthType.DXA },
-      margins: cellMargins,
-      children: [new Paragraph({ spacing: { before: 0, after: 40 }, children: runs })]
-    });
-  }
+  /* TrustArc template palette (sampled from Cookie_Consent_Report_Copy.docx) */
+  const NAVY      = "000579"; // header / titles
+  const BAND_BG   = "E8EFF5"; // category band light blue
+  const ALT_BG    = "FAFBFC"; // alternating row off-white
+  const HDR_TEXT  = "FFFFFF";
+  const BODY_TEXT = "1A1A1A";
+  const GREY      = "595959";
+  const FONT      = "Source Sans Pro";
 
   const dash = (s) => (s && String(s).trim()) ? s : "—";
 
-  /* ---- Title block ---- */
-  const title = new Paragraph({
+  const cellMargins = { top: 80, bottom: 80, left: 120, right: 120 };
+
+  function run(text, opts = {}) {
+    return new TextRun({
+      text: text,
+      font: opts.font || FONT,
+      size: opts.size || 22,
+      bold: !!opts.bold,
+      italics: !!opts.italics,
+      color: opts.color || BODY_TEXT
+    });
+  }
+
+  function para(text, opts = {}) {
+    return new Paragraph({
+      alignment: opts.alignment,
+      spacing: opts.spacing || { before: 0, after: 40 },
+      children: [run(text, opts)]
+    });
+  }
+
+  /* ===========================================================
+     SECTION 1 — COVER PAGE
+     Full-bleed navy background image with TrustArc logo top-right,
+     and the report title centered.
+     =========================================================== */
+  const coverBytes = _b64ToBytes(window.AUDIT_IMAGES && window.AUDIT_IMAGES.cover);
+  const coverChildren = [];
+
+  if (coverBytes) {
+    coverChildren.push(new Paragraph({
+      children: [new ImageRun({
+        data: coverBytes,
+        transformation: { width: 816, height: 1056 },
+        floating: {
+          horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
+          verticalPosition:   { relative: VerticalPositionRelativeFrom.PAGE,   offset: 0 },
+          behindDocument: true,
+          zIndex: -1
+        }
+      })]
+    }));
+  } else {
+    // Fallback: a tall navy-filled single-cell table standing in for the image
+    coverChildren.push(new Table({
+      width: { size: 12240, type: WidthType.DXA },
+      borders: {
+        top:    { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        left:   { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        right:  { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }
+      },
+      rows: [new TableRow({
+        height: { value: 15840, rule: HeightRule.EXACT },
+        children: [new TableCell({
+          width: { size: 12240, type: WidthType.DXA },
+          shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
+          children: [new Paragraph({ children: [run(" ")] })]
+        })]
+      })]
+    }));
+  }
+
+  // Centered title overlay (drawn on top of the floating cover image)
+  coverChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 0, after: 40 },
-    children: [new TextRun({ text: "Cookie Consent Audit Report", font: "Arial", size: 44, bold: true, color: BRAND })]
-  });
-  const subtitle = new Paragraph({
+    spacing: { before: 6200, after: 0 },
+    children: [run("Cookie Consent", {
+      size: 96, bold: true, color: HDR_TEXT
+    })]
+  }));
+  coverChildren.push(new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 0, after: 120 },
-    border: { bottom: { color: BRAND, space: 4, style: BorderStyle.SINGLE, size: 8 } },
-    children: [new TextRun({ text: "TrustArc", font: "Arial", size: 24, italics: true, color: ACCENT })]
-  });
+    spacing: { before: 0, after: 0 },
+    children: [run("Report", {
+      size: 96, bold: true, color: HDR_TEXT
+    })]
+  }));
 
-  /* ---- Metadata table ---- */
-  const metaTblWidth = 11000;
-  const colW = [1500, 4000, 1500, 4000];
-  const metaTable = new Table({
-    width: { size: metaTblWidth, type: WidthType.DXA },
-    columnWidths: colW,
-    borders: noBorder,
-    rows: [
-      new TableRow({
-        children: [
-          plainCell("Website", { width: { size: colW[0], type: WidthType.DXA }, bold: true, fill: SOFT }),
-          plainCell(dash(meta.website_url), { width: { size: colW[1], type: WidthType.DXA } }),
-          plainCell("Date", { width: { size: colW[2], type: WidthType.DXA }, bold: true, fill: SOFT }),
-          plainCell(dash(meta.audit_date), { width: { size: colW[3], type: WidthType.DXA } })
-        ]
-      }),
-      new TableRow({
-        children: [
-          plainCell("Auditor", { width: { size: colW[0], type: WidthType.DXA }, bold: true, fill: SOFT }),
-          plainCell(dash(meta.auditor_name), { width: { size: colW[1], type: WidthType.DXA } }),
-          plainCell("Cookie Banner", { width: { size: colW[2], type: WidthType.DXA }, bold: true, fill: SOFT }),
-          plainCell(dash(meta.current_cmp), { width: { size: colW[3], type: WidthType.DXA } })
-        ]
-      })
-    ]
-  });
+  /* ===========================================================
+     SECTION 2 — BODY
+     Header strip, title, metadata, region findings tables,
+     recommendation, disclaimer.
+     =========================================================== */
+  const bodyChildren = [];
 
-  /* ---- Findings ---- */
-  const findingsHeading = new Paragraph({
-    spacing: { before: 200, after: 60 },
-    border: { bottom: { color: BRAND, space: 2, style: BorderStyle.SINGLE, size: 6 } },
-    children: [new TextRun({ text: "Findings", font: "Arial", size: 28, bold: true, color: BRAND })]
-  });
+  // Header strip image floating at top of body pages
+  const stripBytes = _b64ToBytes(window.AUDIT_IMAGES && window.AUDIT_IMAGES.headerStrip);
+  if (stripBytes) {
+    bodyChildren.push(new Paragraph({
+      children: [new ImageRun({
+        data: stripBytes,
+        transformation: { width: 816, height: 100 },
+        floating: {
+          horizontalPosition: { relative: HorizontalPositionRelativeFrom.PAGE, offset: 0 },
+          verticalPosition:   { relative: VerticalPositionRelativeFrom.PAGE,   offset: 0 },
+          behindDocument: false,
+          zIndex: 0,
+          wrap: { type: TextWrappingType.NONE }
+        }
+      })]
+    }));
+  }
 
-  const findingChildren = [];
+  // Body title — "Cookie Consent Report*" centered in navy
+  bodyChildren.push(new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 600, after: 240 },
+    children: [run("Cookie Consent Report*", { size: 56, bold: true, color: NAVY })]
+  }));
+
+  // Metadata block — left aligned key/value pairs
+  function metaLine(label, value) {
+    return new Paragraph({
+      spacing: { before: 40, after: 40 },
+      children: [
+        run(label, { size: 22, bold: true, color: NAVY }),
+        run(dash(value), { size: 22 })
+      ]
+    });
+  }
+  bodyChildren.push(metaLine("Website: ",                    meta.website_url));
+  bodyChildren.push(metaLine("Date: ",                       meta.audit_date));
+  bodyChildren.push(metaLine("Auditor: ",                    meta.auditor_name));
+  bodyChildren.push(metaLine("Current Cookie Consent Tech: ", meta.current_cmp));
+
+  // Spacer before findings
+  bodyChildren.push(new Paragraph({ spacing: { before: 240, after: 0 }, children: [run(" ", { size: 14 })] }));
+
+  /* ---- Findings tables (one per region) ---- */
+  // Column widths in DXA (Letter content area = 12240 - 2×900 margins ≈ 10440 DXA usable)
+  const colW = [700, 4500, 1100, 1100, 3000]; // Found | Behavior | Reg1 | Reg2 | Comments
+  const tblW = colW.reduce((a, b) => a + b, 0);
+
+  function regCell(regName) {
+    if (!regName) {
+      return new TableCell({
+        width: { size: colW[2], type: WidthType.DXA },
+        margins: cellMargins,
+        children: [new Paragraph({ children: [run(" ", { size: 16 })] })]
+      });
+    }
+    const fill = REG_COLORS[regName] || GREY;
+    return new TableCell({
+      width: { size: colW[2], type: WidthType.DXA },
+      margins: { top: 60, bottom: 60, left: 60, right: 60 },
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: fill },
+      verticalAlign: "center",
+      children: [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [run(regName, { size: 18, bold: true, color: HDR_TEXT })]
+      })]
+    });
+  }
+
+  function buildFindingRow(f, isAlt) {
+    const reg1 = f.regulations[0] || null;
+    const reg2 = f.regulations[1] || null;
+    const rowFill = isAlt ? ALT_BG : "FFFFFF";
+
+    const foundCell = new TableCell({
+      width: { size: colW[0], type: WidthType.DXA },
+      margins: cellMargins,
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
+      verticalAlign: "center",
+      children: [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [run("☒", { size: 32, bold: true, color: "C0392B" })]
+      })]
+    });
+
+    const labelRuns = [];
+    if (f.descriptor) {
+      labelRuns.push(run(f.descriptor + ". ", { size: 20, bold: true, color: NAVY }));
+    }
+    labelRuns.push(run(f.label, { size: 20 }));
+
+    const behaviorCell = new TableCell({
+      width: { size: colW[1], type: WidthType.DXA },
+      margins: cellMargins,
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
+      children: [new Paragraph({ spacing: { before: 0, after: 0 }, children: labelRuns })]
+    });
+
+    const r1 = reg1 ? regCell(reg1) : new TableCell({
+      width: { size: colW[2], type: WidthType.DXA },
+      margins: cellMargins,
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
+      children: [new Paragraph({ children: [run(" ", { size: 16 })] })]
+    });
+    const r2 = reg2 ? regCell(reg2) : new TableCell({
+      width: { size: colW[3], type: WidthType.DXA },
+      margins: cellMargins,
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
+      children: [new Paragraph({ children: [run(" ", { size: 16 })] })]
+    });
+
+    const commentsCell = new TableCell({
+      width: { size: colW[4], type: WidthType.DXA },
+      margins: cellMargins,
+      shading: { type: ShadingType.CLEAR, color: "auto", fill: rowFill },
+      children: [new Paragraph({
+        children: [run(f.note || "", { size: 18, italics: !!f.note, color: GREY })]
+      })]
+    });
+
+    return new TableRow({ cantSplit: true, children: [foundCell, behaviorCell, r1, r2, commentsCell] });
+  }
+
+  function buildBandRow(title) {
+    return new TableRow({
+      cantSplit: true,
+      children: [new TableCell({
+        width: { size: tblW, type: WidthType.DXA },
+        columnSpan: 5,
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: BAND_BG },
+        margins: { top: 100, bottom: 100, left: 140, right: 140 },
+        children: [new Paragraph({
+          children: [run(title, { size: 22, bold: true, color: NAVY })]
+        })]
+      })]
+    });
+  }
+
+  function buildHeaderRow() {
+    function hCell(text, width, span) {
+      return new TableCell({
+        width: { size: width, type: WidthType.DXA },
+        columnSpan: span || 1,
+        shading: { type: ShadingType.CLEAR, color: "auto", fill: NAVY },
+        margins: { top: 100, bottom: 100, left: 120, right: 120 },
+        verticalAlign: "center",
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [run(text, { size: 20, bold: true, color: HDR_TEXT })]
+        })]
+      });
+    }
+    return new TableRow({
+      tableHeader: true,
+      children: [
+        hCell("Found",             colW[0]),
+        hCell("Observed Behavior", colW[1]),
+        hCell("Regulation",        colW[2] + colW[3], 2),
+        hCell("Comments",          colW[4])
+      ]
+    });
+  }
 
   if (!checkedSections.length) {
-    findingChildren.push(new Paragraph({
-      spacing: { before: 80, after: 80 },
-      children: [new TextRun({ text: "No issues identified during this audit.", font: "Arial", size: 20, italics: true, color: GREY })]
+    bodyChildren.push(new Paragraph({
+      spacing: { before: 200, after: 200 },
+      children: [run("No issues identified during this audit.", { italics: true, color: GREY, size: 22 })]
     }));
   } else {
     for (const sec of checkedSections) {
-      findingChildren.push(new Paragraph({
-        spacing: { before: 160, after: 40 },
-        children: [new TextRun({ text: sec.title, font: "Arial", size: 22, bold: true, color: BRAND })]
+      // Region heading
+      bodyChildren.push(new Paragraph({
+        spacing: { before: 320, after: 120 },
+        children: [run(sec.title, { size: 28, bold: true, color: NAVY })]
       }));
 
+      const rows = [buildHeaderRow()];
       for (const cat of sec.categories) {
-        findingChildren.push(new Paragraph({
-          spacing: { before: 80, after: 40 },
-          children: [new TextRun({ text: cat.title, font: "Arial", size: 18, bold: true, color: ACCENT })]
-        }));
-
-        const findColW = [220, 8400, 2380];
-        const rows = [];
+        rows.push(buildBandRow(cat.title));
+        let alt = false;
         for (const f of cat.findings) {
-          const sevColor = f.severity === "REQUIRED" ? REQUIRED : BEST;
-          const regsText = f.regulations.join(" · ");
-
-          rows.push(new TableRow({
-            cantSplit: true,
-            children: [
-              new TableCell({
-                width: { size: findColW[0], type: WidthType.DXA },
-                margins: cellMargins,
-                shading: { type: ShadingType.CLEAR, color: "auto", fill: sevColor },
-                children: [p(" ", { size: 18 })]
-              }),
-              findingCell(f, findColW[1]),
-              new TableCell({
-                width: { size: findColW[2], type: WidthType.DXA },
-                margins: cellMargins,
-                children: [p(regsText, { size: 16, bold: true, color: BRAND })]
-              })
-            ]
-          }));
-
-          if (f.note) {
-            rows.push(new TableRow({
-              cantSplit: true,
-              children: [
-                new TableCell({
-                  width: { size: findColW[0], type: WidthType.DXA },
-                  margins: cellMargins,
-                  children: [p(" ", { size: 14 })]
-                }),
-                new TableCell({
-                  width: { size: findColW[1] + findColW[2], type: WidthType.DXA },
-                  columnSpan: 2,
-                  margins: cellMargins,
-                  children: [p(`Note: ${f.note}`, { size: 16, italics: true, color: GREY })]
-                })
-              ]
-            }));
-          }
+          rows.push(buildFindingRow(f, alt));
+          alt = !alt;
         }
-
-        findingChildren.push(new Table({
-          width: { size: metaTblWidth, type: WidthType.DXA },
-          columnWidths: findColW,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 4, color: "E0E0E0" },
-            bottom: { style: BorderStyle.SINGLE, size: 4, color: "E0E0E0" },
-            left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-            right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-            insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "E0E0E0" },
-            insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }
-          },
-          rows
-        }));
       }
+
+      bodyChildren.push(new Table({
+        width: { size: tblW, type: WidthType.DXA },
+        columnWidths: colW,
+        borders: {
+          top:              { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+          bottom:           { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+          left:             { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+          right:            { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" },
+          insideVertical:   { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" }
+        },
+        rows
+      }));
     }
   }
 
-  const legend = new Paragraph({
-    alignment: AlignmentType.RIGHT,
-    spacing: { before: 80, after: 60 },
-    children: [
-      new TextRun({ text: "■ ", font: "Arial", size: 16, color: REQUIRED, bold: true }),
-      new TextRun({ text: "REQUIRED — legal violation    ", font: "Arial", size: 16, color: GREY }),
-      new TextRun({ text: "■ ", font: "Arial", size: 16, color: BEST, bold: true }),
-      new TextRun({ text: "BEST PRACTICE — recommended fix", font: "Arial", size: 16, color: GREY })
-    ]
-  });
-
   /* ---- Recommendation ---- */
-  const recHeading = new Paragraph({
-    spacing: { before: 120, after: 60 },
-    border: { bottom: { color: BRAND, space: 2, style: BorderStyle.SINGLE, size: 6 } },
-    children: [new TextRun({ text: "Recommendation", font: "Arial", size: 24, bold: true, color: BRAND })]
-  });
-  const recBody = new Paragraph({
+  bodyChildren.push(new Paragraph({
+    spacing: { before: 360, after: 120 },
+    children: [run("Recommendation:", { size: 28, bold: true, color: NAVY })]
+  }));
+  bodyChildren.push(new Paragraph({
     alignment: AlignmentType.JUSTIFIED,
-    spacing: { before: 40, after: 100 },
-    children: [new TextRun({ text: meta.recommendation || "—", font: "Arial", size: 20 })]
-  });
+    spacing: { before: 40, after: 240 },
+    children: [run(meta.recommendation || "—", { size: 22 })]
+  }));
 
-  /* ---- Disclaimer + Footer ---- */
-  const disclaimer = new Paragraph({
-    spacing: { before: 60, after: 40 },
-    children: [new TextRun({
-      text: "*This report is informational and is not intended to serve as legal advice. Please carefully consult your privacy and/or legal teams prior to making any legal decisions.",
-      font: "Arial", size: 16, italics: true, bold: true, color: GREY
-    })]
-  });
-  const footer = new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 80, after: 0 },
-    children: [new TextRun({
-      text: "© 2026 TrustArc Inc | US 888.878.7830 | EU +44 (0)203.078.6495 | www.trustarc.com",
-      font: "Arial", size: 16, color: GREY
-    })]
-  });
+  /* ---- Disclaimer ---- */
+  bodyChildren.push(new Paragraph({
+    spacing: { before: 240, after: 40 },
+    children: [run(
+      "*This report is informational and is not intended to serve as legal advice. Please carefully consult your privacy and/or legal teams prior to making any legal decisions.",
+      { size: 16, italics: true, color: GREY }
+    )]
+  }));
 
+  /* ===========================================================
+     ASSEMBLE TWO-SECTION DOCUMENT
+     =========================================================== */
   const doc = new Document({
     creator: "TrustArc Cookie Consent Health Checker",
-    title: "Cookie Consent Audit Report",
-    sections: [{
-      properties: {
-        page: {
-          size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
-          margin: { top: 864, right: 864, bottom: 864, left: 864 }
-        }
+    title: "Cookie Consent Report",
+    background: { color: "FFFFFF" },
+    sections: [
+      {
+        properties: {
+          page: {
+            size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
+            margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0, gutter: 0 }
+          }
+        },
+        children: coverChildren
       },
-      children: [
-        title,
-        subtitle,
-        metaTable,
-        findingsHeading,
-        ...findingChildren,
-        legend,
-        recHeading,
-        recBody,
-        disclaimer,
-        footer
-      ]
-    }]
+      {
+        properties: {
+          page: {
+            size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
+            margin: { top: 1440, right: 900, bottom: 1080, left: 900, header: 0, footer: 0, gutter: 0 }
+          }
+        },
+        children: bodyChildren
+      }
+    ]
   });
 
   return doc;
